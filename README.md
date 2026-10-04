@@ -1,6 +1,6 @@
 # Chronos
 
-Sade bir ajanda: takvimden günü seç, o günün notlarını hemen yaz.
+Şık ve sade bir ajanda paneli: takvimden günü seç, o günün notlarını hemen yaz.
 
 | Telefon | Koyu tema | Tablet |
 |---|---|---|
@@ -22,8 +22,11 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
 
 - Takvimde bir güne dokun; alttaki alana notunu yaz ve gönder.
 - Notun başına veya sonuna saat yazarsan saat etiketi olur ve gün içinde sıralanır: `14:30 Diş hekimi`.
-- Daireye dokununca not tamamlanır, metne dokununca düzenlenir, × ile silinir.
-- Notu olan günlerin altında nokta görünür. Başka aydayken "Bugün" düğmesi bugüne döner.
+- Kutucuğa dokununca not tamamlanır, metne dokununca düzenlenir, çöp kutusu ile silinir.
+- Yazma çubuğundaki renkli daireden notun rengini seç; karttaki renkli noktaya dokunarak sonradan değiştir.
+- Üstteki kart günün özetini gösterir: not sayısı, tamamlanma yüzdesi ve sıradaki saatli not.
+- Takvim hafta şeridi olarak açılır; takvim simgesiyle tüm ayı aç. Notu olan günlerin altında nokta görünür.
+- "Tümü / Yapılacak / Bitti" sekmeleriyle notları süz. Başka bir gündeyken sağ üstteki düğme bugüne döner.
 - Telefonun açık/koyu temasına otomatik uyar.
 
 ## Tarayıcı önizlemesi

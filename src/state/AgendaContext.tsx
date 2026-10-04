@@ -20,7 +20,8 @@ interface AgendaState {
   /** Herhangi bir not değiştiğinde artar; takvim noktaları buna göre yenilenir */
   revision: number;
   selectDate: (date: ISODate) => void;
-  addNote: (text: string) => Promise<void>;
+  addNote: (text: string, color?: string | null) => Promise<void>;
+  setNoteColor: (id: string, color: string | null) => Promise<void>;
   updateNote: (id: string, text: string) => Promise<void>;
   toggleNote: (id: string) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
@@ -73,11 +74,11 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   }, []);
 
   const addNote = useCallback(
-    async (input: string) => {
+    async (input: string, color?: string | null) => {
       if (!notebookId) return;
       const { text, time } = parseNote(input);
       if (!text) return;
-      await repo.createEntry(notebookId, { text, time, date: dateRef.current });
+      await repo.createEntry(notebookId, { text, time, color, date: dateRef.current });
       haptics.tap();
       bump();
     },
@@ -89,6 +90,15 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
       const { text, time } = parseNote(input);
       if (!text) return;
       await repo.updateEntry(id, text, time);
+      bump();
+    },
+    [repo, bump],
+  );
+
+  const setNoteColor = useCallback(
+    async (id: string, color: string | null) => {
+      await repo.setEntryColor(id, color);
+      haptics.select();
       bump();
     },
     [repo, bump],
@@ -121,6 +131,7 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     revision,
     selectDate,
     addNote,
+    setNoteColor,
     updateNote,
     toggleNote,
     deleteNote,

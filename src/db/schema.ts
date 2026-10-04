@@ -1,7 +1,7 @@
 // Local-first SQLite şeması (op-sqlite ile çalıştırılacak).
 // Kurulum: src/db/migrate.ts, sorgular: src/db/repository.ts
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const CREATE_TABLES: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS notebooks (
@@ -33,7 +33,8 @@ export const CREATE_TABLES: readonly string[] = [
     is_completed INTEGER NOT NULL DEFAULT 0,
     audio_path TEXT,
     is_inbox INTEGER NOT NULL DEFAULT 0,
-    created_at INTEGER NOT NULL DEFAULT 0
+    created_at INTEGER NOT NULL DEFAULT 0,
+    color TEXT
   )`,
   // Günlük sayfaya tarihle hızlı erişim ve Havuz sorguları için indeksler
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_notebook_date ON pages(notebook_id, date)`,
@@ -41,3 +42,9 @@ export const CREATE_TABLES: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS idx_entries_page ON entries(page_id)`,
   `CREATE INDEX IF NOT EXISTS idx_entries_inbox ON entries(is_inbox)`,
 ];
+
+/** Sürüm yükseltme adımları: anahtar, adımın getirdiği sürümdür. */
+export const UPGRADES: Record<number, readonly string[]> = {
+  // v2: notlara renk etiketi
+  2: ['ALTER TABLE entries ADD COLUMN color TEXT'],
+};

@@ -40,4 +40,5 @@ export interface Entry {
   audio_path: string | null;
   is_inbox: boolean;
   created_at: number; // Unix ms; aynı saat çizgisindeki girişlerin sırası
+  color: string | null; // renk etiketi anahtarı (theme.ts → NoteTags)
 }

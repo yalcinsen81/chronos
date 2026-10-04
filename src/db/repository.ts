@@ -42,6 +42,7 @@ const toEntry = (r: Row): EntryWithDate => ({
   audio_path: (r.audio_path as string | null) ?? null,
   is_inbox: Number(r.is_inbox) === 1,
   created_at: Number(r.created_at ?? 0),
+  color: (r.color as string | null) ?? null,
   date: (r.date as string | null) ?? null,
 });
 
@@ -124,6 +125,7 @@ export function createRepository(db: SqlDriver) {
     date?: ISODate | null;
     time?: string | null;
     audioPath?: string | null;
+    color?: string | null;
   }
 
   /** Tarih verilmezse giriş Havuz'a (Inbox) düşer. */
@@ -138,12 +140,22 @@ export function createRepository(db: SqlDriver) {
       audio_path: input.audioPath ?? null,
       is_inbox: !page,
       created_at: Date.now(),
+      color: input.color ?? null,
       date: input.date ?? null,
     };
     await db.execute(
-      `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, audio_path, is_inbox, created_at)
-       VALUES (?, ?, ?, ?, 0, ?, ?, ?)`,
-      [entry.id, entry.page_id, entry.time_slot, entry.text_content, entry.audio_path, entry.is_inbox ? 1 : 0, entry.created_at],
+      `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, audio_path, is_inbox, created_at, color)
+       VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+      [
+        entry.id,
+        entry.page_id,
+        entry.time_slot,
+        entry.text_content,
+        entry.audio_path,
+        entry.is_inbox ? 1 : 0,
+        entry.created_at,
+        entry.color,
+      ],
     );
     return entry;
   }
@@ -195,6 +207,10 @@ export function createRepository(db: SqlDriver) {
     await db.execute('UPDATE entries SET text_content = ?, time_slot = ? WHERE id = ?', [text.trim(), time, entryId]);
   }
 
+  async function setEntryColor(entryId: string, color: string | null) {
+    await db.execute('UPDATE entries SET color = ? WHERE id = ?', [color, entryId]);
+  }
+
   async function deleteEntry(entryId: string) {
     await db.execute('DELETE FROM entries WHERE id = ?', [entryId]);
   }
@@ -215,6 +231,7 @@ export function createRepository(db: SqlDriver) {
     moveEntryToInbox,
     toggleEntry,
     updateEntry,
+    setEntryColor,
     deleteEntry,
   };
 }

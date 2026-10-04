@@ -5,6 +5,7 @@
 import type { SqlDriver } from '../driver';
 import { migrate } from '../migrate';
 import { createRepository } from '../repository';
+import { CREATE_TABLES } from '../schema';
 
 function createNodeDriver(): SqlDriver {
   // jest çözümleyicisini atlamak için getBuiltinModule kullanılır
@@ -91,5 +92,21 @@ describe('repository', () => {
     expect(u.time_slot).toBe('08:30');
     await repo.deleteEntry(e.id);
     expect(await repo.listEntriesForDate(nb.id, '2026-10-04')).toHaveLength(0);
+  });
+
+  it('renk etiketini saklar; v1 veri tabanı v2ye yükseltilir', async () => {
+    const { repo, nb } = await setup();
+    const e = await repo.createEntry(nb.id, { text: 'Spor', date: '2026-10-05', color: 'green' });
+    expect((await repo.listEntriesForDate(nb.id, '2026-10-05'))[0].color).toBe('green');
+    await repo.setEntryColor(e.id, null);
+    expect((await repo.listEntriesForDate(nb.id, '2026-10-05'))[0].color).toBeNull();
+
+    // Eski (v1) şemalı veri tabanı: color sütunu yok
+    const driver = createNodeDriver();
+    for (const sql of CREATE_TABLES) await driver.execute(sql.replace(',\n    color TEXT', ''));
+    await driver.execute('PRAGMA user_version = 1');
+    await migrate(driver);
+    const cols = await driver.execute("SELECT name FROM pragma_table_info('entries')");
+    expect(cols.map((c) => c.name)).toContain('color');
   });
 });
