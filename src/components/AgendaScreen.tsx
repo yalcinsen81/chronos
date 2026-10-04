@@ -30,21 +30,30 @@ export default function AgendaScreen() {
   const wide = width >= WIDE_BREAKPOINT;
   const { date, weekDays, weekNotes, selectDate } = useAgenda();
   const [openNote, setOpenNote] = useState<EntryWithDate | null>(null);
+  const [alarmFirst, setAlarmFirst] = useState(false);
+  const open = (n: EntryWithDate, alarm = false) => {
+    setAlarmFirst(alarm);
+    setOpenNote(n);
+  };
 
   // Açık not, liste yenilenince en güncel haliyle gösterilir
-  const current = openNote ? (Object.values(weekNotes).flat().find((n) => n.id === openNote.id) ?? openNote) : null;
+  const current = openNote
+    ? (Object.values(weekNotes)
+        .flat()
+        .find((n) => n.id === openNote.id) ?? openNote)
+    : null;
 
   return (
     <SafeAreaView style={[styles.flex, { backgroundColor: c.bg }]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <WeekHeader showStrip={!wide} />
+        <WeekHeader showStrip={!wide} onOpenNote={open} />
         {wide ? (
-          <WideWeek width={width} days={weekDays} notes={weekNotes} focus={date} onOpen={setOpenNote} />
+          <WideWeek width={width} days={weekDays} notes={weekNotes} focus={date} onOpen={open} />
         ) : (
-          <PhoneWeek width={width} days={weekDays} notes={weekNotes} focus={date} onFocus={selectDate} onOpen={setOpenNote} />
+          <PhoneWeek width={width} days={weekDays} notes={weekNotes} focus={date} onFocus={selectDate} onOpen={open} />
         )}
       </KeyboardAvoidingView>
-      <NoteSheet note={current} onClose={() => setOpenNote(null)} />
+      <NoteSheet note={current} alarm={alarmFirst} onClose={() => setOpenNote(null)} />
     </SafeAreaView>
   );
 }
@@ -54,7 +63,7 @@ interface WeekProps {
   days: ISODate[];
   notes: Record<ISODate, EntryWithDate[]>;
   focus: ISODate;
-  onOpen: (n: EntryWithDate) => void;
+  onOpen: (n: EntryWithDate, alarm?: boolean) => void;
 }
 
 /** Geniş ekran: sütunlar yan yana; ekrana sığmazsa yatay kaydırılır, seçili gün görünür tutulur */

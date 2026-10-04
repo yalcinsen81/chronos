@@ -4,10 +4,11 @@ Haftalık planlayıcı: haftanın her günü, çizgili bir defter sayfası gibi 
 dokun, yaz, Enter'a bas; not o güne eklenir. Tasarım, GitHub'daki
 [weekly-planner](https://github.com/topics/weekly-planner) konusunun en popüler projesi
 [WeekToDo](https://github.com/manuelernestog/weektodo)'dan esinlenir (kodu kopyalanmadı, yalnızca düzen örnek alındı).
+Renkler sıcak bir kağıt havasında: fildişi zemin, kil rengi vurgu, tırnaklı başlıklar.
 
-| Hafta (bilgisayar/tablet) | Telefon | Not ayrıntısı | Takvim | Koyu tema |
+| Hafta (bilgisayar/tablet) | Telefon | Alarm kurma | Yaklaşan alarmlar | Koyu tema |
 |---|---|---|---|---|
-| ![](docs/screenshots/hafta.png) | ![](docs/screenshots/telefon.png) | ![](docs/screenshots/not-detay.png) | ![](docs/screenshots/takvim.png) | ![](docs/screenshots/koyu.png) |
+| ![](docs/screenshots/hafta.png) | ![](docs/screenshots/telefon.png) | ![](docs/screenshots/not-detay.png) | ![](docs/screenshots/alarmlar.png) | ![](docs/screenshots/koyu.png) |
 
 ## Telefonda denemek (en kolay yol)
 
@@ -29,8 +30,9 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
   odaklanır, peş peşe not yazabilirsin. Başına saat yazarsan (`09:00 Toplantı`, `930 Spor`) saat ayrıca gösterilir.
 - Kutucuk notu tamamlar (üstü çizilir). Nota dokununca ayrıntı kartı açılır: açıklama, saat, renk etiketi, alarm, silme.
 - Üstteki **‹ ›** oklar haftayı değiştirir, **Bugün** bu haftaya döner. Ay adına dokununca ay takvimi açılır.
-- **Alarm:** not kartında saat girdikten sonra ⏰ çipine dokun ve ne zaman çalacağını seç (tam saatinde, 5/15/30 dk,
-  1 saat veya 1 gün önce). İlk seferde bildirim izni sorulur. Saati gelince telefon sesli bildirim gösterir;
+- **Alarm:** saati olan her notun sağında ⏰ zil vardır; dokununca alarm seçenekleri açılır (tam saatinde, 5/15/30 dk,
+  1 saat veya 1 gün önce). Kurulu alarmın zili renklenir. Üst çubuktaki zil, sayısıyla birlikte yaklaşan tüm alarmları
+  listeler; birine dokununca o gün ve not açılır. Saatsiz nota alarm için önce kartta saat gir. İlk seferde bildirim izni sorulur. Saati gelince telefon sesli bildirim gösterir;
   not tamamlanır veya silinirse alarm iptal olur. Tarayıcı önizlemesinde alarm çalmaz.
 - Telefonun açık/koyu temasına otomatik uyar.
 

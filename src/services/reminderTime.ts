@@ -32,3 +32,14 @@ export function reminderFireDate(date: ISODate | null, time: string | null, minu
 export function shouldSchedule(fire: Date | null, now: Date = new Date()): fire is Date {
   return fire !== null && fire.getTime() > now.getTime() + 1000;
 }
+
+/** Yaklaşan alarmlar: çalma anı gelecekte olanlar, en yakını önce */
+export function upcomingAlarms<
+  T extends { date: ISODate | null; time_slot: string | null; reminder_minutes: number | null; is_completed: boolean },
+>(entries: T[], now: Date = new Date()): (T & { fireAt: Date })[] {
+  return entries
+    .filter((e) => !e.is_completed)
+    .map((e) => ({ ...e, fireAt: reminderFireDate(e.date, e.time_slot, e.reminder_minutes) }))
+    .filter((e): e is T & { fireAt: Date } => e.fireAt !== null && e.fireAt.getTime() > now.getTime())
+    .sort((a, b) => a.fireAt.getTime() - b.fireAt.getTime());
+}

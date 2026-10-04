@@ -1,5 +1,5 @@
-// Görsel sabitler. Tasarım dili, iki Apple Design Award almış Things 3'ten esinlenir:
-// bol beyaz alan, sistem yazı tipi, ince ayrımlar, tek vurgu rengi (mavi) ve yüzen "+" düğmesi.
+// Görsel sabitler. Sıcak "kağıt" dili (kullanıcı Claude arayüzünün sıcaklığını istedi):
+// fildişi zemin, sıcak gri çizgiler, kil/terrakota vurgu rengi ve tırnaklı (serif) başlıklar.
 // Bileşenlerde sabit renk kodu yazılmaz; usePalette() kullanılır.
 
 import { Platform, useColorScheme, type TextStyle } from 'react-native';
@@ -14,11 +14,11 @@ export interface Palette {
   textMuted: string;
   textFaint: string;
   separator: string;
-  accent: string; // mavi: "+" düğmesi, seçili gün
-  accentSoft: string; // açık mavi zemin: etkin alarm çipi
+  accent: string; // kil rengi: bugün, saat, alarm
+  accentSoft: string; // açık kil zemini: etkin alarm çipi
   onAccent: string;
-  today: string; // bugünün rakamı (Apple takvim kırmızısı)
-  star: string; // "Bugün" başlığındaki yıldız (Things sarısı)
+  today: string; // bugünün rakamı
+  star: string; // hardal sarısı
   check: string; // kutucuk çerçevesi
   danger: string;
   shadow: string;
@@ -26,51 +26,51 @@ export interface Palette {
 
 export const LightPalette: Palette = {
   scheme: 'light',
-  bg: '#FFFFFF',
-  sidebar: '#F5F6F8',
-  card: '#FFFFFF',
-  fill: '#F2F3F5',
-  text: '#1C1D20',
-  textMuted: '#7C8089',
-  textFaint: '#B4B8BF',
-  separator: '#E7E8EB',
-  accent: '#2E7CF6',
-  accentSoft: '#E6F0FE',
+  bg: '#FAF9F5',
+  sidebar: '#F0EEE6',
+  card: '#FFFEFB',
+  fill: '#F0EDE4',
+  text: '#2B2A26',
+  textMuted: '#7A776D',
+  textFaint: '#B3AFA3',
+  separator: '#E6E1D4',
+  accent: '#C2613F',
+  accentSoft: '#F6E5DC',
   onAccent: '#FFFFFF',
-  today: '#E6483D',
-  star: '#F4C430',
-  check: '#C5C8CE',
-  danger: '#E6483D',
-  shadow: 'rgba(17, 24, 39, 0.14)',
+  today: '#C2613F',
+  star: '#D9A441',
+  check: '#C9C3B4',
+  danger: '#B84A3E',
+  shadow: 'rgba(60, 45, 30, 0.18)',
 };
 
 export const DarkPalette: Palette = {
   scheme: 'dark',
-  bg: '#1E1F23',
-  sidebar: '#18191C',
-  card: '#2A2C31',
-  fill: '#2E3036',
-  text: '#ECEDEF',
-  textMuted: '#9A9EA6',
-  textFaint: '#5E626A',
-  separator: '#33353B',
-  accent: '#4A8DF8',
-  accentSoft: '#22324D',
+  bg: '#262624',
+  sidebar: '#1F1E1D',
+  card: '#30302E',
+  fill: '#3A3936',
+  text: '#ECEAE3',
+  textMuted: '#A6A39A',
+  textFaint: '#6B6964',
+  separator: '#3C3B37',
+  accent: '#D97757',
+  accentSoft: '#4A3128',
   onAccent: '#FFFFFF',
-  today: '#FF6A5E',
-  star: '#F4C430',
-  check: '#5A5E66',
-  danger: '#FF6A5E',
-  shadow: 'rgba(0, 0, 0, 0.5)',
+  today: '#E88A6B',
+  star: '#E0B25A',
+  check: '#66635C',
+  danger: '#E07A6B',
+  shadow: 'rgba(0, 0, 0, 0.55)',
 };
 
 /** Not etiket renkleri; veri tabanında anahtar saklanır (ör. "green") */
 export const NoteTags = {
-  blue: { light: '#2E7CF6', dark: '#4A8DF8', label: 'Mavi' },
-  green: { light: '#34A853', dark: '#4CC36A', label: 'Yeşil' },
-  orange: { light: '#F29D38', dark: '#F5AB52', label: 'Turuncu' },
-  red: { light: '#E6483D', dark: '#FF6A5E', label: 'Kırmızı' },
-  purple: { light: '#9B59D0', dark: '#B07CE0', label: 'Mor' },
+  blue: { light: '#5B7FA8', dark: '#7F9FC4', label: 'Mavi' },
+  green: { light: '#6A8F5B', dark: '#8DB07C', label: 'Yeşil' },
+  orange: { light: '#D08A2E', dark: '#E0A453', label: 'Turuncu' },
+  red: { light: '#B84A3E', dark: '#E07A6B', label: 'Kırmızı' },
+  purple: { light: '#8A68A6', dark: '#AE8FC7', label: 'Mor' },
 } as const;
 
 export type NoteTag = keyof typeof NoteTags;
@@ -83,11 +83,19 @@ export function tagColor(tag: string | null | undefined, c: Palette): string | n
   return c.scheme === 'dark' ? t.dark : t.light;
 }
 
-/** Sistem yazı tipi (iOS'ta SF Pro, Android'de Roboto); tipografi ölçeği iOS'un metin stillerini izler */
-const family = Platform.select({ web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', default: undefined });
+/** Gövde metni sistem yazı tipi; başlıklar sıcak bir tırnaklı yazı tipi (cihazda hazır olan, paket gerekmez) */
+const family = Platform.select({
+  web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  default: undefined,
+});
+const serif = Platform.select({
+  ios: 'Georgia',
+  android: 'serif',
+  web: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
+});
 export const Type = {
-  largeTitle: { fontFamily: family, fontSize: 32, fontWeight: '700', letterSpacing: -0.6 },
-  title: { fontFamily: family, fontSize: 20, fontWeight: '700', letterSpacing: -0.3 },
+  largeTitle: { fontFamily: serif, fontSize: 32, fontWeight: '600', letterSpacing: -0.4 },
+  title: { fontFamily: serif, fontSize: 21, fontWeight: '600', letterSpacing: -0.2 },
   body: { fontFamily: family, fontSize: 17, fontWeight: '400', lineHeight: 22 },
   bodyBold: { fontFamily: family, fontSize: 17, fontWeight: '600' },
   sub: { fontFamily: family, fontSize: 15, fontWeight: '400', lineHeight: 20 },

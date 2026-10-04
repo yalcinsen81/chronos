@@ -17,7 +17,15 @@ import { useAgenda } from '../state/AgendaContext';
 import Checkbox from './Checkbox';
 import { webNoOutline } from './webStyles';
 
-export default function NoteEditor({ note, onClose }: { note?: EntryWithDate; onClose: () => void }) {
+export default function NoteEditor({
+  note,
+  startWithAlarm = false,
+  onClose,
+}: {
+  note?: EntryWithDate;
+  startWithAlarm?: boolean;
+  onClose: () => void;
+}) {
   const c = usePalette();
   const { saveNote, deleteNote, toggleNote } = useAgenda();
   const initial = note ? splitNote(note.text_content) : { title: '', body: '' };
@@ -27,7 +35,7 @@ export default function NoteEditor({ note, onClose }: { note?: EntryWithDate; on
   const [color, setColor] = useState<string | null>(note?.color ?? null);
   const [timeError, setTimeError] = useState(false);
   const [reminder, setReminder] = useState<number | null>(note?.reminder_minutes ?? null);
-  const [alarmOpen, setAlarmOpen] = useState(false);
+  const [alarmOpen, setAlarmOpen] = useState(startWithAlarm);
   const [alarmHint, setAlarmHint] = useState<string | null>(null);
   const bodyRef = useRef<TextInput>(null);
   const isNew = !note;
@@ -97,7 +105,7 @@ export default function NoteEditor({ note, onClose }: { note?: EntryWithDate; on
           />
         </View>
         <TextInput
-          autoFocus
+          autoFocus={!startWithAlarm}
           value={title}
           onChangeText={setTitle}
           onKeyPress={onKey}

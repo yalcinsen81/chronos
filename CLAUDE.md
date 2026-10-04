@@ -2,7 +2,7 @@
 
 Haftalık planlayıcı: her gün çizgili satırlı bir sütun; boş satıra dokun, yaz, Enter. Düzen
 [WeekToDo](https://github.com/manuelernestog/weektodo)'dan esinlenir (GPL-3.0; kodu kopyalanmaz, yalnızca düzen).
-Renkler ve not kartı Things 3 dilinde kalır.
+Renkler sıcak "kağıt" dilinde (kullanıcı Claude arayüzünün sıcaklığını istedi): fildişi zemin, kil vurgu, serif başlıklar.
 Expo SDK 57 + React Native + TypeScript. Expo Go'da çalışır.
 
 > 2026-10-04: Kullanıcı ilk "fiziksel defter" tasarımını (deri kapak, Skia kağıt, el yazısı, sayfa kıvırma,
@@ -32,7 +32,7 @@ src/
                         WeekHeader (ay/hafta, oklar, Bugün, gün şeridi, ay takvimi penceresi),
                         DayColumn (gün sütunu: çizgili satırlar + hızlı ekleme satırı),
                         NoteSheet + NoteEditor (not ayrıntı kartı: açıklama, saat, renk, alarm),
-                        CalendarView (ay takvimi), Checkbox
+                        AlarmList (üst çubuktaki zil + yaklaşan alarmlar), CalendarView (ay takvimi), Checkbox
   constants/theme.ts    Açık/koyu palet, not renk etiketleri, yazı tipleri, ölçüler, usePalette()
   state/AgendaContext   Seçili gün, haftanın 7 günü ve notları (weekNotes), ekle/düzenle/tamamla/sil
   services/             calendar.ts (tarih yardımcıları), notes.ts (saat ayıklama/normalleştirme,
