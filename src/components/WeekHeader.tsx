@@ -9,6 +9,7 @@ import { Radius, Space, Type, usePalette, WIDE_BREAKPOINT } from '../constants/t
 import { addDays, fromISODate, isoWeekNumber, todayISO, TR_MONTHS, TR_WEEKDAYS_SHORT } from '../services/calendar';
 import { useAgenda } from '../state/AgendaContext';
 import type { EntryWithDate } from '../db/repository';
+import Aurora from './Aurora';
 import AlarmButton from './AlarmList';
 import CalendarView from './CalendarView';
 import PressScale from './PressScale';
@@ -23,7 +24,7 @@ export default function WeekHeader({
   onOpenNote: (n: EntryWithDate) => void;
 }) {
   const c = usePalette();
-  const { date, weekStart, weekDays, weekNotes, selectDate, view, showWeek } = useAgenda();
+  const { date, weekStart, weekDays, weekNotes, selectDate, view, showWeek, aurora } = useAgenda();
   const { width } = useWindowDimensions();
   const day = view === 'day';
   const step = day ? 1 : 7;
@@ -43,6 +44,7 @@ export default function WeekHeader({
 
   return (
     <View style={[styles.wrap, { borderBottomColor: c.separator }]}>
+      {aurora && <Aurora height={showStrip ? 150 : 90} />}
       <View style={styles.bar}>
         {day && (
           <PressScale

@@ -13,7 +13,7 @@ import { webNoOutline } from './webStyles';
 
 export default function SettingsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const c = usePalette();
-  const { accent, setAccent, exportBackup, importBackup } = useAgenda();
+  const { accent, setAccent, exportBackup, importBackup, aurora, setAurora } = useAgenda();
   const [backupText, setBackupText] = useState('');
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restoreText, setRestoreText] = useState('');
@@ -98,6 +98,24 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
                 );
               })}
             </View>
+
+            <Pressable
+              onPress={() => setAurora(!aurora)}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: aurora }}
+              accessibilityLabel="Işıltılı arka plan"
+              style={styles.switchRow}
+            >
+              <View style={styles.flex1}>
+                <Text style={[Type.body, { color: c.text }]}>Işıltılı arka plan</Text>
+                <Text style={[Type.caption, { color: c.textMuted, fontWeight: '400' }]}>
+                  Üst çubukta temanın renkleri yavaşça süzülür
+                </Text>
+              </View>
+              <View style={[styles.track, { backgroundColor: aurora ? c.accent : c.separator }]}>
+                <View style={[styles.thumb, aurora && styles.thumbOn]} />
+              </View>
+            </Pressable>
 
             <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>YEDEK</Text>
             <Text style={[Type.caption, styles.note, { color: c.textMuted }]}>
@@ -210,6 +228,11 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: Space.lg, paddingBottom: Space.lg, gap: Space.sm },
   section: { marginTop: Space.md, letterSpacing: 0.8 },
   note: { fontWeight: '400', lineHeight: 18 },
+  flex1: { flex: 1 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: Space.md, paddingTop: Space.lg },
+  track: { width: 48, height: 28, borderRadius: 14, padding: 2, justifyContent: 'center' },
+  thumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff' },
+  thumbOn: { alignSelf: 'flex-end' },
   swatches: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Space.xs },
   swatchWrap: { alignItems: 'center', gap: 6 },
   ring: {

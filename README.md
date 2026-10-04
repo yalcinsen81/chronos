@@ -50,6 +50,7 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
 - **Telefonda +:** sağ alttaki turuncu düğme seçili güne yeni not açar; kart alttan yükselir, tutamaçtan aşağı çekince kapanır.
 - **İlerleme halkası ve konfeti:** her günün başlığında tamamlanan not oranı görünür; hepsini bitirince halka dolar ve konfeti patlar.
 - **Zaman çizgisi:** gün görünümünde şimdiki zaman noktası nabız gibi atar; alarmı bir saat içinde çalacak blok yanıp söner.
+- **Işıltılı üst çubuk:** seçili temanın renkleri üst çubuğun arkasında yavaşça süzülür ([ShaderGradient](https://github.com/ruucm/shadergradient) fikrinden esinli, MIT; WebGL kullanılmaz). Ayarlar'dan kapatılır; "hareketi azalt" açıksa sabit durur.
 - **⋯ menüsü:** *Ara* (notlarda arama + renk süzgeci) ve *Ayarlar* (renk teması: turuncu, mercan, orman, deniz, mor; yedeği kopyala/paylaş; yedekten geri yükle).
 - Telefonun açık/koyu temasına otomatik uyar.
 
