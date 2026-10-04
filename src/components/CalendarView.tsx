@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
-import { Space, Type, usePalette } from '../constants/theme';
+import { Radius, Space, Type, usePalette } from '../constants/theme';
 import {
   addDays,
   addMonths,
@@ -22,6 +22,7 @@ import {
   type ISODate,
 } from '../services/calendar';
 import { useAgenda } from '../state/AgendaContext';
+import TodayPulse from './TodayPulse';
 
 export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMonth?: boolean; onPick?: () => void }) {
   const c = usePalette();
@@ -67,13 +68,23 @@ export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMo
           accessibilityRole="button"
           accessibilityLabel={expanded ? 'Haftalık görünüm' : 'Aylık görünüm'}
         >
-          <Text style={[Type.bodyBold, { color: c.text }]}>
-            {TR_MONTHS[titleDate.getMonth()]}{' '}
-            <Text style={{ color: c.textMuted, fontWeight: '400' }}>{titleDate.getFullYear()}</Text>
+          <Text style={[Type.title, { color: c.text }]}>
+            {TR_MONTHS[titleDate.getMonth()]} <Text style={{ color: c.textMuted }}>{titleDate.getFullYear()}</Text>
           </Text>
           {!alwaysMonth && <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={c.accent} />}
         </Pressable>
         <View style={styles.arrows}>
+          {showMonth && anchor.slice(0, 7) !== todayISO().slice(0, 7) && (
+            <Pressable
+              onPress={() => setAnchor(todayISO())}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="Bu aya dön"
+              style={[styles.todayChip, { backgroundColor: c.accentSoft }]}
+            >
+              <Text style={[Type.caption, { color: c.accent }]}>Bugün</Text>
+            </Pressable>
+          )}
           <Arrow icon="chevron-back" label={showMonth ? 'Önceki ay' : 'Önceki hafta'} onPress={() => step(-1)} />
           <Arrow icon="chevron-forward" label={showMonth ? 'Sonraki ay' : 'Sonraki hafta'} onPress={() => step(1)} />
         </View>
@@ -87,7 +98,7 @@ export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMo
         ))}
       </View>
 
-      <Animated.View key={showMonth ? 'm' : 'w'} entering={FadeIn.duration(160)}>
+      <Animated.View key={showMonth ? `m${anchor.slice(0, 7)}` : 'w'} entering={FadeIn.duration(180)}>
         {rows.map((r) => (
           <View key={r[0].iso} style={styles.row}>
             {r.map((cell) => {
@@ -105,19 +116,31 @@ export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMo
                   accessibilityLabel={`${cell.day} ${TR_MONTHS[fromISODate(cell.iso).getMonth()]}`}
                   accessibilityState={{ selected }}
                 >
-                  <View style={[styles.circle, selected && { backgroundColor: cell.isToday ? c.today : c.accent }]}>
+                  <View
+                    style={[
+                      styles.circle,
+                      cell.isToday && !selected && { backgroundColor: c.accentSoft },
+                      selected && { backgroundColor: c.accent },
+                    ]}
+                  >
+                    {cell.isToday && <TodayPulse color={c.accent} radius={18} />}
                     <Text
                       style={[
                         styles.num,
-                        { color: cell.inMonth ? c.text : c.textFaint },
-                        cell.isToday && { color: c.today, fontWeight: '700' },
+                        { color: !cell.inMonth ? c.textFaint : cell.isWeekend ? c.textMuted : c.text },
+                        cell.isToday && { color: c.accent, fontWeight: '700' },
                         selected && { color: c.onAccent, fontWeight: '700' },
                       ]}
                     >
                       {cell.day}
                     </Text>
                   </View>
-                  <View style={[styles.dot, { backgroundColor: has ? c.textFaint : 'transparent' }]} />
+                  <View
+                    style={[
+                      styles.dot,
+                      { backgroundColor: has ? c.accent : 'transparent', opacity: cell.inMonth ? 0.55 : 0.25 },
+                    ]}
+                  />
                 </Pressable>
               );
             })}
@@ -161,10 +184,17 @@ const styles = StyleSheet.create({
     height: 44,
   },
   titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: Space.sm },
-  arrows: { flexDirection: 'row' },
+  arrows: { flexDirection: 'row', alignItems: 'center' },
+  todayChip: {
+    paddingHorizontal: Space.md,
+    height: 28,
+    borderRadius: Radius.pill,
+    justifyContent: 'center',
+    marginRight: Space.xs,
+  },
   arrow: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row' },
-  weekday: { flex: 1, textAlign: 'center', paddingBottom: 6 },
+  weekday: { flex: 1, textAlign: 'center', paddingTop: Space.xs, paddingBottom: Space.sm, letterSpacing: 0.8 },
   cell: { flex: 1, alignItems: 'center', paddingTop: 2, paddingBottom: 4 },
   circle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   num: { fontSize: 17, fontVariant: ['tabular-nums'] },
