@@ -79,7 +79,12 @@ export default function DayView({
     const focus = isToday ? nowTop : placed[0] ? ((placed[0].minutes - start * 60) / 60) * HOUR_HEIGHT : 0;
     const t = setTimeout(() => {
       const abs = timelineY.current + focus;
-      const y = abs < viewportH.current - 140 ? 0 : abs - viewportH.current / 3;
+      // Saat çizgisi ekranın üst kenarında yarım kesilmesin: kaydırmayı tam saat sınırına oturt, 12px pay bırak
+      const raw = abs - viewportH.current / 3;
+      const y =
+        abs < viewportH.current - 140
+          ? 0
+          : Math.floor((raw - timelineY.current) / HOUR_HEIGHT) * HOUR_HEIGHT + timelineY.current - 12;
       scroller.current?.scrollTo({ y: Math.max(0, y), animated: false });
     }, 60);
     return () => clearTimeout(t);
@@ -364,7 +369,18 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, height: 46, paddingHorizontal: 6 },
   hourRow: { position: 'absolute', left: 0, right: 0, borderRadius: Radius.sm },
-  hourLabel: { position: 'absolute', left: 0, top: -6, width: LABEL_W - 10, fontVariant: ['tabular-nums'] },
+  // Yazı yüksekliği sabit: etiketin ortası tam çizginin üstüne gelir (Android'in ek yazı boşluğu kapatılır)
+  hourLabel: {
+    position: 'absolute',
+    left: 0,
+    top: -7,
+    width: LABEL_W - 10,
+    height: 14,
+    lineHeight: 14,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    fontVariant: ['tabular-nums'],
+  },
   hourLine: { position: 'absolute', top: 0, left: LABEL_W, right: 0, height: StyleSheet.hairlineWidth },
   blocks: { position: 'absolute', top: 0, bottom: 0, left: LABEL_W, right: 0 },
   blockSlot: { position: 'absolute', paddingRight: 4, paddingTop: 2 },
