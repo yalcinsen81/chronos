@@ -74,6 +74,10 @@ src/
 16. **Kademeli giriş:** `TaskLine` satırları `index` ile sırayla belirir (FadeInDown + gecikme, en çok 8 adım); gün şeridinde seçili gün yaylanarak büyür.
 17. **Doğal dil ve alt görevler saf servislerdir** (`naturalDate.ts`, `checklist.ts`; testli). Alt görevler şemayı değiştirmez: açıklamada
     `[ ] / [x]` satırları. Günlük özet bildirimleri `daily-<tarih>` kimliğiyle kurulur ve her değişiklikte baştan kurulur (`scheduleDailySummaries`).
+18. **Süre, geri al, çoklu seçim:** şema v6 `entries.end_time` (yalnızca başlangıç saati varken geçerli; `blockDuration` en az 30 dk, varsayılan 45).
+    Geri al AgendaContext'tedir (`offerUndo`, anlık görüntü + `repo.importEntries`; 5 sn'lik `UndoBar`). Çoklu seçim `selection/bulk*` ile yapılır
+    (`SelectionBar`; uzun bas → "Seç"). Şablonlar `settings.templates` (JSON, `services/templates.ts`), bağlantılar `services/links.ts`.
+    Bugün listesi `TodaySheet` (son 60 gün geciken + bugün). Koyu temada "saf siyah" `settings.pureBlack`, `paletteFor(..., black)`.
 
 ## Komutlar
 

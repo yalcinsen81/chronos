@@ -13,8 +13,18 @@ import { webNoOutline } from './webStyles';
 
 export default function SettingsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const c = usePalette();
-  const { accent, setAccent, exportBackup, importBackup, density, setDensity, summaryHour, setSummaryHour } =
-    useAgenda();
+  const {
+    accent,
+    setAccent,
+    exportBackup,
+    importBackup,
+    pureBlack,
+    setBlack,
+    density,
+    setDensity,
+    summaryHour,
+    setSummaryHour,
+  } = useAgenda();
   const [backupText, setBackupText] = useState('');
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restoreText, setRestoreText] = useState('');
@@ -99,6 +109,15 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
                   </Pressable>
                 );
               })}
+            </View>
+
+            <View style={styles.btnRow}>
+              <Pill
+                icon={pureBlack ? 'moon' : 'moon-outline'}
+                label="Koyu temada saf siyah"
+                active={pureBlack}
+                onPress={() => setBlack(!pureBlack)}
+              />
             </View>
 
             <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>SATIR SIKLIĞI</Text>

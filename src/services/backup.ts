@@ -7,6 +7,7 @@ export interface BackupEntry {
   id: string;
   date: string;
   time: string | null;
+  end?: string | null;
   text: string;
   done: boolean;
   color: string | null;
@@ -34,6 +35,7 @@ export function buildBackup(entries: EntryWithDate[], now: Date = new Date()): B
         id: e.id,
         date: e.date as string,
         time: e.time_slot,
+        ...(e.end_time ? { end: e.end_time } : {}),
         text: e.text_content,
         done: e.is_completed,
         color: e.color,
@@ -70,6 +72,7 @@ export function parseBackup(json: string): ParsedBackup {
       id: raw.id,
       date: raw.date,
       time: typeof raw.time === 'string' && TIME.test(raw.time) ? raw.time : null,
+      end: typeof raw.end === 'string' && TIME.test(raw.end) ? raw.end : null,
       text: raw.text,
       done: raw.done === true,
       color: typeof raw.color === 'string' ? raw.color : null,

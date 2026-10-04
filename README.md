@@ -54,6 +54,14 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
 - **Tamamlananlar sona iner ve soluklaşır;** tamamlayınca yazının üstünden çizgi çekilir.
 - **Günlük özet:** Ayarlar'dan 07:00, 08:00 ya da 09:00 seç; o saatte "Bugün 4 notun var" bildirimi gelir (önümüzdeki 7 gün, notlar
   değiştikçe güncellenir; iOS 64 bildirim sınırı için yalnızca 7 gün kurulur). Tarayıcıda çalmaz.
+- **Süre:** başa `14:00-15:30 Toplantı` yaz ya da kartta *Bitiş* çipini seç; gün görünümünde blok süre kadar uzar, "14:00–15:30" görünür.
+  Alarmı 60 dk içinde olan notta "alarm N dk sonra" yazar.
+- **Geri al:** silme, taşıma ve tamamlamadan sonra alttaki çubukta 5 saniye *Geri al* çıkar.
+- **Çoklu seçim:** nota uzun bas → *Seç*; sonra istediğin kadar nota seçip alttaki çubuktan *Tamamla / Bugüne / Yarına / Sil*.
+- **Bugün listesi (⋯ menüsü):** geciken (son 60 gün) ve bugünkü açık notlar tek listede; her birini *Bugüne / Yarına* al ya da "Hepsini bugüne al".
+- **Şablonlar (⋯ menüsü):** sık kullanılan listeleri (ör. alışveriş, sabah rutini) kaydet; seçili güne alt görevleriyle eklenir.
+- **Bağlantılar:** notta `https://...` varsa kartta çip olarak görünür, dokununca açılır.
+- **Saf siyah:** Ayarlar'dan koyu temada tam siyah zemin (OLED). Hafta sütun başlığındaki ince çizgi günün doluluğunu gösterir.
 - **Satır sıklığı:** Ayarlar'dan *Rahat* ya da *Sıkı*.
 - **Uzun bas menüsü:** nota (satır ya da gün çizelgesindeki blok) uzun basınca *Düzenle, Tamamla/Geri al, Bugüne taşı, Yarına taşı, Sil*.
 - **Telefonda +:** sağ alttaki turuncu düğme seçili güne yeni not açar; kart alttan yükselir, tutamaçtan aşağı çekince kapanır.

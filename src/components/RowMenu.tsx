@@ -15,7 +15,7 @@ export default function RowMenu({ onEdit }: { onEdit: (alarm?: boolean) => void 
   const c = usePalette();
   const { width } = useWindowDimensions();
   const sheet = width < WIDE_BREAKPOINT;
-  const { menuNote: note, closeMenu, toggleNote, moveNote, deleteNote } = useAgenda();
+  const { menuNote: note, closeMenu, toggleNote, moveNote, deleteNote, startSelect } = useAgenda();
   const today = todayISO();
 
   if (!note) return null;
@@ -35,6 +35,7 @@ export default function RowMenu({ onEdit }: { onEdit: (alarm?: boolean) => void 
       label: 'Yarına taşı',
       run: () => moveNote(note.id, addDays(note.date && note.date > today ? note.date : today, 1)),
     },
+    { icon: 'checkbox-outline', label: 'Seç', run: () => startSelect(note.id) },
     { icon: 'trash-outline', label: 'Sil', danger: true, run: () => deleteNote(note.id) },
   ];
 

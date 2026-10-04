@@ -9,11 +9,11 @@ import Animated, { FadeIn, FadeInDown, FadeInLeft, FadeInRight } from 'react-nat
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
 import { addDays, formatWeekday, fromISODate, todayISO, TR_MONTHS, type ISODate } from '../services/calendar';
-import { BLOCK_MINUTES, HOUR_HEIGHT, hourRange, layoutDay, timeToMinutes } from '../services/dayLayout';
+import { blockDuration, HOUR_HEIGHT, hourRange, layoutDay, timeToMinutes } from '../services/dayLayout';
 import { checklistProgress } from '../services/checklist';
 import { parseSmart } from '../services/naturalDate';
 import { splitNote } from '../services/notes';
-import { reminderLabel } from '../services/reminderTime';
+import { reminderFireDate, reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
 import Bell from './Bell';
 import Checkbox from './Checkbox';
@@ -53,7 +53,13 @@ export default function DayView({
   const open = notes.filter((n) => !n.is_completed).length;
   const { start, end } = useMemo(() => hourRange(timed.map((n) => timeToMinutes(n.time_slot!))), [timed]);
   const placed = useMemo(
-    () => layoutDay(timed.map((n) => ({ id: n.id, minutes: timeToMinutes(n.time_slot!) }))),
+    () =>
+      layoutDay(
+        timed.map((n) => {
+          const m = timeToMinutes(n.time_slot!);
+          return { id: n.id, minutes: m, duration: blockDuration(m, n.end_time ? timeToMinutes(n.end_time) : null) };
+        }),
+      ),
     [timed],
   );
   const byId = useMemo(() => Object.fromEntries(timed.map((n) => [n.id, n])), [timed]);
@@ -95,8 +101,8 @@ export default function DayView({
     const value = draft.trim();
     if (!value) return;
     setDraft('');
-    const { text, time, date: when } = parseSmart(value);
-    await saveNote({ text, time, color: null, reminder: null, date: when ?? date });
+    const { text, time, endTime, date: when } = parseSmart(value);
+    await saveNote({ text, time, endTime, color: null, reminder: null, date: when ?? date });
     if (when && when !== date) selectDate(when);
   };
 
@@ -206,6 +212,8 @@ export default function DayView({
                     top={((p.minutes - start * 60) / 60) * HOUR_HEIGHT}
                     lane={p.lane}
                     lanes={p.lanes}
+                    duration={p.duration}
+                    nowMs={now.getTime()}
                     onOpen={onOpen}
                   />
                 );
@@ -232,6 +240,8 @@ function Block({
   top,
   lane,
   lanes,
+  duration,
+  nowMs,
   onOpen,
 }: {
   note: EntryWithDate;
@@ -239,15 +249,22 @@ function Block({
   top: number;
   lane: number;
   lanes: number;
+  duration: number;
+  nowMs: number;
   onOpen: (note: EntryWithDate, alarm?: boolean) => void;
 }) {
   const c = usePalette();
-  const { toggleNote, openMenu } = useAgenda();
+  const { toggleNote, openMenu, selection, toggleSelect, selecting } = useAgenda();
+  const selected = selection.includes(note.id);
   const { title, body } = splitNote(note.text_content);
   const tint = tagColor(note.color, c) ?? c.accent;
   const done = note.is_completed;
   const alarm = note.reminder_minutes != null && !done;
   const sub = checklistProgress(body);
+  // Alarmı bir saat içinde çalacaksa kalan süre yazılır (süslemeden, yalnızca bilgi)
+  const fire = alarm ? reminderFireDate(note.date, note.time_slot, note.reminder_minutes) : null;
+  const minsLeft = fire ? Math.ceil((fire.getTime() - nowMs) / 60_000) : null;
+  const soon = minsLeft != null && minsLeft > 0 && minsLeft <= 60;
 
   return (
     <Animated.View
@@ -256,21 +273,22 @@ function Block({
         styles.blockSlot,
         {
           top,
-          height: (BLOCK_MINUTES / 60) * HOUR_HEIGHT - 3,
+          height: (duration / 60) * HOUR_HEIGHT - 3,
           left: `${(lane / lanes) * 100}%`,
           width: `${100 / lanes}%`,
         },
       ]}
     >
       <Pressable
-        onPress={() => onOpen(note)}
-        onLongPress={() => openMenu(note)}
+        onPress={() => (selecting ? toggleSelect(note.id) : onOpen(note))}
+        onLongPress={() => (selecting ? toggleSelect(note.id) : openMenu(note))}
         delayLongPress={380}
         accessibilityRole="button"
         accessibilityHint="Ayrıntılar için dokun, menü için uzun bas"
         style={({ pressed }) => [
           styles.block,
           { backgroundColor: tint + (c.scheme === 'dark' ? '33' : '22'), borderLeftColor: tint },
+          selected && { borderWidth: 2, borderColor: c.accent, borderLeftWidth: 4 },
           pressed && { opacity: 0.7 },
         ]}
       >
@@ -279,8 +297,13 @@ function Block({
           <StrikeText text={title || body} done={done} style={Type.sub} color={c.text} lineColor={c.textFaint} />
           <Text numberOfLines={1} style={[Type.micro, { color: done ? c.textFaint : tint }]}>
             {note.time_slot}
+            {note.end_time ? `–${note.end_time}` : ''}
             {sub.total > 0 ? `  ·  ${sub.done}/${sub.total}` : ''}
-            {alarm ? `  ·  ${reminderLabel(note.reminder_minutes, true)}` : ''}
+            {soon
+              ? `  ·  alarm ${minsLeft} dk sonra`
+              : alarm
+                ? `  ·  ${reminderLabel(note.reminder_minutes, true)}`
+                : ''}
           </Text>
         </View>
         {lanes < 3 && (

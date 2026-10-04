@@ -7,7 +7,7 @@ import type { SqlDriver } from '../db/driver';
 import { migrate } from '../db/migrate';
 import { createRepository, type EntryWithDate, type Repository } from '../db/repository';
 import { addDays, startOfWeek, todayISO, type ISODate } from '../services/calendar';
-import { setAccentKey, isAccentKey, type AccentKey } from '../constants/theme';
+import { setAccentKey, setPureBlack, isAccentKey, type AccentKey } from '../constants/theme';
 import { buildBackup, parseBackup } from '../services/backup';
 import { haptics } from '../services/haptics';
 import {
@@ -22,6 +22,13 @@ import {
 import { materializeSeries } from '../services/series';
 import { splitNote } from '../services/notes';
 
+/** Son işlemi geri alan toast (silme, tamamlama, taşıma) */
+export interface UndoAction {
+  id: number;
+  label: string;
+  run: () => Promise<void>;
+}
+
 export type Density = 'rahat' | 'siki';
 
 export interface NoteInput {
@@ -32,6 +39,8 @@ export interface NoteInput {
   /** İlk satır başlık, kalan satırlar açıklama */
   text: string;
   time: string | null;
+  /** Bitiş saati (süre); saat yoksa yok sayılır */
+  endTime?: string | null;
   color: string | null;
   /** Saatten kaç dakika önce alarm; null = alarm yok */
   reminder: number | null;
@@ -70,11 +79,29 @@ interface AgendaState {
   showWeek: () => void;
   /** Notu başka güne taşır (alarmı yeni güne göre yeniden kurulur) */
   moveNote: (id: string, date: ISODate) => Promise<void>;
+  /** Birkaç notu birden taşır (geri alınabilir) */
+  moveNotes: (ids: string[], date: ISODate) => Promise<void>;
   /** O günün tamamlanmamış notlarını bugüne aktarır */
   carryOver: (date: ISODate) => Promise<void>;
   /** Seçili vurgu rengi (ayarlardan) */
   accent: AccentKey;
   setAccent: (key: AccentKey) => Promise<void>;
+  /** Geri alınabilir son işlem (birkaç saniye görünür) */
+  undo: UndoAction | null;
+  runUndo: () => Promise<void>;
+  dismissUndo: () => void;
+  /** Çoklu seçim: seçili not kimlikleri; boşsa seçim kipi kapalı */
+  selection: string[];
+  selecting: boolean;
+  startSelect: (id: string) => void;
+  toggleSelect: (id: string) => void;
+  clearSelection: () => void;
+  bulkComplete: () => Promise<void>;
+  bulkMove: (target: ISODate) => Promise<void>;
+  bulkDelete: () => Promise<void>;
+  /** Koyu temada saf siyah zemin */
+  pureBlack: boolean;
+  setBlack: (on: boolean) => Promise<void>;
   /** Satır sıklığı (ayarlardan) */
   density: Density;
   setDensity: (d: Density) => Promise<void>;
@@ -105,6 +132,9 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   const [revision, setRevision] = useState(0);
   const [view, setView] = useState<AgendaView>('week');
   const [accent, setAccentState] = useState<AccentKey>('turuncu');
+  const [undo, setUndo] = useState<UndoAction | null>(null);
+  const [selection, setSelection] = useState<string[]>([]);
+  const [pureBlack, setPureBlackState] = useState(false);
   const [density, setDensityState] = useState<Density>('rahat');
   const [summaryHour, setSummaryHourState] = useState<number | null>(null);
   const [menuNote, setMenuNote] = useState<EntryWithDate | null>(null);
@@ -142,6 +172,10 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
       if (isAccentKey(savedAccent)) {
         setAccentKey(savedAccent);
         setAccentState(savedAccent);
+      }
+      if ((await repo.getSetting('pureBlack')) === '1') {
+        setPureBlack(true);
+        setPureBlackState(true);
       }
       const savedDensity = await repo.getSetting('density');
       if (savedDensity === 'siki' || savedDensity === 'rahat') setDensityState(savedDensity);
@@ -210,6 +244,7 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
         const e = await repo.createEntry(notebookId, {
           text,
           time: input.time,
+          endTime: input.endTime ?? null,
           color: input.color,
           reminderMinutes: input.reminder,
           repeat: input.repeat ?? null,
@@ -220,6 +255,9 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
       } else {
         await repo.updateEntry(id, text, input.time);
         await repo.setEntryColor(id, input.color);
+        if (input.endTime !== undefined || !input.time) {
+          await repo.setEntryEndTime(id, input.time ? (input.endTime ?? null) : null);
+        }
         await repo.setEntryReminder(id, input.reminder);
         if (input.repeat !== undefined) {
           const before = await repo.getEntry(id);
@@ -235,7 +273,17 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     [repo, notebookId, bump, syncReminder],
   );
 
-  const toggleNote = useCallback(
+  const offerUndo = useCallback((label: string, run: () => Promise<void>) => {
+    setUndo({ id: Date.now(), label, run });
+  }, []);
+  const dismissUndo = useCallback(() => setUndo(null), []);
+  const runUndo = useCallback(async () => {
+    const u = undo;
+    setUndo(null);
+    if (u) await u.run();
+  }, [undo]);
+
+  const flipNote = useCallback(
     async (id: string) => {
       await repo.toggleEntry(id);
       haptics.select();
@@ -245,28 +293,126 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     [repo, bump, syncReminder],
   );
 
-  const deleteNote = useCallback(
+  const toggleNote = useCallback(
     async (id: string) => {
-      const entry = await repo.getEntry(id);
-      await cancelReminder(entry?.notification_id ?? null);
-      await cancelSnooze(id);
-      await repo.deleteEntry(id);
-      haptics.tap();
-      bump();
+      const before = await repo.getEntry(id);
+      await flipNote(id);
+      if (before && !before.is_completed) offerUndo('Tamamlandı', () => flipNote(id));
     },
-    [repo, bump],
+    [repo, flipNote, offerUndo],
   );
 
-  const moveNote = useCallback(
-    async (id: string, target: ISODate) => {
+  /** Silinen notları (yedek biçimiyle) aynı kimlikle geri koyar */
+  const restoreNotes = useCallback(
+    async (list: EntryWithDate[]) => {
       if (!notebookId) return;
-      await repo.moveEntryToDate(notebookId, id, target);
-      haptics.tap();
-      await syncReminder(id);
+      await repo.importEntries(
+        notebookId,
+        list
+          .filter((e) => e.date)
+          .map((e) => ({
+            id: e.id,
+            date: e.date as ISODate,
+            time: e.time_slot,
+            end: e.end_time,
+            text: e.text_content,
+            done: e.is_completed,
+            color: e.color,
+            reminder: e.reminder_minutes,
+            repeat: e.repeat,
+            series: e.series_id,
+            created: e.created_at,
+          })),
+      );
+      for (const e of list) await syncReminder(e.id);
       bump();
     },
     [repo, notebookId, bump, syncReminder],
   );
+
+  const removeNotes = useCallback(
+    async (ids: string[]) => {
+      const gone: EntryWithDate[] = [];
+      for (const id of ids) {
+        const entry = await repo.getEntry(id);
+        if (!entry) continue;
+        gone.push(entry);
+        await cancelReminder(entry.notification_id);
+        await cancelSnooze(id);
+        await repo.deleteEntry(id);
+      }
+      haptics.tap();
+      bump();
+      if (gone.length)
+        offerUndo(gone.length === 1 ? 'Not silindi' : `${gone.length} not silindi`, () => restoreNotes(gone));
+    },
+    [repo, bump, offerUndo, restoreNotes],
+  );
+  const deleteNote = useCallback((id: string) => removeNotes([id]), [removeNotes]);
+
+  const relocate = useCallback(
+    async (moves: { id: string; to: ISODate }[]) => {
+      if (!notebookId) return;
+      const back: { id: string; to: ISODate }[] = [];
+      for (const m of moves) {
+        const e = await repo.getEntry(m.id);
+        if (e?.date) back.push({ id: m.id, to: e.date });
+        await repo.moveEntryToDate(notebookId, m.id, m.to);
+        await syncReminder(m.id);
+      }
+      haptics.tap();
+      bump();
+      return back;
+    },
+    [repo, notebookId, bump, syncReminder],
+  );
+
+  const moveNote = useCallback(
+    async (id: string, target: ISODate) => {
+      const back = await relocate([{ id, to: target }]);
+      if (back?.length) offerUndo('Taşındı', async () => void (await relocate(back)));
+    },
+    [relocate, offerUndo],
+  );
+
+  const moveNotes = useCallback(
+    async (ids: string[], target: ISODate) => {
+      const back = await relocate(ids.map((id) => ({ id, to: target })));
+      if (back?.length) offerUndo(`${back.length} not taşındı`, async () => void (await relocate(back)));
+    },
+    [relocate, offerUndo],
+  );
+
+  // --- Çoklu seçim ---
+  const startSelect = useCallback((id: string) => {
+    haptics.select();
+    setSelection([id]);
+  }, []);
+  const toggleSelect = useCallback((id: string) => {
+    haptics.select();
+    setSelection((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+  }, []);
+  const clearSelection = useCallback(() => setSelection([]), []);
+  const bulkComplete = useCallback(async () => {
+    for (const id of selection) {
+      const e = await repo.getEntry(id);
+      if (e && !e.is_completed) await flipNote(id);
+    }
+    setSelection([]);
+  }, [selection, repo, flipNote]);
+  const bulkMove = useCallback(
+    async (target: ISODate) => {
+      const back = await relocate(selection.map((id) => ({ id, to: target })));
+      setSelection([]);
+      if (back?.length) offerUndo(`${back.length} not taşındı`, async () => void (await relocate(back)));
+    },
+    [selection, relocate, offerUndo],
+  );
+  const bulkDelete = useCallback(async () => {
+    const ids = selection;
+    setSelection([]);
+    await removeNotes(ids);
+  }, [selection, removeNotes]);
 
   const carryOver = useCallback(
     async (from: ISODate) => {
@@ -289,6 +435,16 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
       setAccentState(key);
       haptics.select();
       await repo.setSetting('accent', key);
+    },
+    [repo],
+  );
+
+  const setBlack = useCallback(
+    async (on: boolean) => {
+      setPureBlack(on);
+      setPureBlackState(on);
+      haptics.select();
+      await repo.setSetting('pureBlack', on ? '1' : '0');
     },
     [repo],
   );
@@ -381,6 +537,19 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     revision,
     accent,
     setAccent,
+    pureBlack,
+    setBlack,
+    undo,
+    runUndo,
+    dismissUndo,
+    selection,
+    selecting: selection.length > 0,
+    startSelect,
+    toggleSelect,
+    clearSelection,
+    bulkComplete,
+    bulkMove,
+    bulkDelete,
     density,
     setDensity,
     summaryHour,
@@ -396,6 +565,7 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     showDay,
     showWeek,
     moveNote,
+    moveNotes,
     carryOver,
     saveNote,
     toggleNote,

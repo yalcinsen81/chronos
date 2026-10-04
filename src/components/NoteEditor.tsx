@@ -5,12 +5,13 @@
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { NOTE_TAG_KEYS, NoteTags, Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
 import { joinChecklist, splitChecklist, type ChecklistItem } from '../services/checklist';
+import { extractLinks, linkLabel } from '../services/links';
 import { parseSmart } from '../services/naturalDate';
 import { joinNote, normalizeTime, splitNote } from '../services/notes';
 import { remindersSupported, requestReminderPermission } from '../services/reminders';
@@ -54,6 +55,7 @@ export default function NoteEditor({
   const itemRef = useRef<TextInput>(null);
   const [time, setTime] = useState(note?.time_slot ?? initialTime ?? '');
   const [color, setColor] = useState<string | null>(note?.color ?? null);
+  const [end, setEnd] = useState(note?.end_time ?? '');
   const [timeError, setTimeError] = useState(false);
   const [reminder, setReminder] = useState<number | null>(note?.reminder_minutes ?? null);
   const [alarmOpen, setAlarmOpen] = useState(startWithAlarm);
@@ -62,6 +64,7 @@ export default function NoteEditor({
   const [alarmHint, setAlarmHint] = useState<string | null>(null);
   const bodyRef = useRef<TextInput>(null);
   const isNew = !note;
+  const links = extractLinks([title, body, ...items.map((i) => i.text)].join('\n'));
   const canSave = Boolean(title.trim() || body.trim() || items.length > 0 || newItem.trim());
 
   const save = async () => {
@@ -74,11 +77,22 @@ export default function NoteEditor({
       setTimeError(true);
       return;
     }
+    let e = normalizeTime(end);
+    if (e === undefined) {
+      setTimeError(true);
+      return;
+    }
     let ttl = title;
     if (t === null) {
       const p = parseSmart(title);
       ttl = p.text;
       t = p.time;
+      if (e === null) e = p.endTime;
+    }
+    if (e && (!t || e <= t)) {
+      setTimeError(true);
+      setAlarmHint('Bitiş saati başlangıçtan sonra olmalı');
+      return;
     }
     if (reminder != null && !t) {
       setTimeError(true);
@@ -91,6 +105,7 @@ export default function NoteEditor({
       date: note ? undefined : newDate,
       text: joinNote(ttl, joinChecklist(body, all)),
       time: t,
+      endTime: e,
       color,
       reminder,
       repeat,
@@ -218,6 +233,25 @@ export default function NoteEditor({
         </View>
       </View>
 
+      {links.length > 0 && (
+        <View style={styles.links}>
+          {links.map((u) => (
+            <Pressable
+              key={u}
+              onPress={() => Linking.openURL(u).catch(() => undefined)}
+              accessibilityRole="link"
+              accessibilityLabel={`Bağlantıyı aç: ${u}`}
+              style={[styles.link, { backgroundColor: c.accentSoft }]}
+            >
+              <Ionicons name="link-outline" size={14} color={c.accent} />
+              <Text numberOfLines={1} style={[Type.caption, { color: c.accent }]}>
+                {linkLabel(u)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       <View style={styles.footer}>
         <View style={styles.chips}>
           <View
@@ -245,6 +279,34 @@ export default function NoteEditor({
               accessibilityLabel="Saat"
             />
           </View>
+
+          {(time.trim() !== '' || end.trim() !== '') && (
+            <View
+              style={[styles.timeChip, { backgroundColor: c.fill, borderColor: timeError ? c.danger : 'transparent' }]}
+            >
+              <Ionicons name="arrow-forward" size={14} color={end ? c.accent : c.textMuted} />
+              <TextInput
+                value={end}
+                onChangeText={(v) => {
+                  setEnd(v);
+                  setTimeError(false);
+                  if (alarmHint === 'Bitiş saati başlangıçtan sonra olmalı') setAlarmHint(null);
+                }}
+                onKeyPress={onKey}
+                onBlur={() => {
+                  const n = normalizeTime(end);
+                  if (n) setEnd(n);
+                  else if (n === undefined) setTimeError(true);
+                }}
+                placeholder="Bitiş"
+                placeholderTextColor={c.textMuted}
+                keyboardType="numbers-and-punctuation"
+                maxLength={5}
+                style={[Type.caption, styles.timeInput, webNoOutline, { color: c.text }]}
+                accessibilityLabel="Bitiş saati"
+              />
+            </View>
+          )}
 
           <Pressable
             onPress={() => {
@@ -414,6 +476,22 @@ export default function NoteEditor({
 }
 
 const styles = StyleSheet.create({
+  links: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Space.sm,
+    paddingHorizontal: Space.lg,
+    paddingBottom: Space.sm,
+  },
+  link: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 28,
+    paddingHorizontal: Space.sm,
+    borderRadius: Radius.pill,
+    maxWidth: '100%',
+  },
   items: { paddingHorizontal: Space.lg, paddingBottom: Space.sm, gap: 2 },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: Space.sm, minHeight: 34 },
   itemInput: { flex: 1, minWidth: 0, paddingVertical: 4 },

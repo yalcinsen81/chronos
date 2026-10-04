@@ -35,6 +35,7 @@ export interface Entry {
   id: string;
   page_id: string | null; // Inbox (Havuz) girişlerinde null
   time_slot: string | null; // "HH:mm"
+  end_time: string | null; // "HH:mm" bitiş saati (süre); yoksa null
   text_content: string;
   is_completed: boolean;
   audio_path: string | null;

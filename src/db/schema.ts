@@ -1,7 +1,7 @@
 // Local-first SQLite şeması (op-sqlite ile çalıştırılacak).
 // Kurulum: src/db/migrate.ts, sorgular: src/db/repository.ts
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const CREATE_TABLES: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS notebooks (
@@ -38,7 +38,8 @@ export const CREATE_TABLES: readonly string[] = [
     reminder_minutes INTEGER,
     notification_id TEXT,
     repeat TEXT,
-    series_id TEXT
+    series_id TEXT,
+    end_time TEXT
   )`,
   `CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY NOT NULL,
@@ -66,4 +67,6 @@ export const UPGRADES: Record<number, readonly string[]> = {
   ],
   // v5: ayarlar (vurgu rengi vb.)
   5: ['CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)'],
+  // v6: notun bitiş saati ("HH:mm"; NULL = süre yok)
+  6: ['ALTER TABLE entries ADD COLUMN end_time TEXT'],
 };

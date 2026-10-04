@@ -1,4 +1,4 @@
-import { layoutDay, hourRange, timeToMinutes } from '../dayLayout';
+import { blockDuration, layoutDay, hourRange, timeToMinutes } from '../dayLayout';
 import { nextOccurrence, occurrencesAfter, repeatLabel } from '../recurrence';
 
 describe('nextOccurrence', () => {
@@ -57,5 +57,24 @@ describe('layoutDay', () => {
   it('saat aralığı notlara göre genişler', () => {
     expect(hourRange([])).toEqual({ start: 7, end: 22 });
     expect(hourRange([timeToMinutes('05:30'), timeToMinutes('23:10')])).toEqual({ start: 5, end: 24 });
+  });
+});
+
+describe('süre (bitiş saati)', () => {
+  it('blok süresi bitişe göre, en az 30 dk; bitiş yoksa varsayılan', () => {
+    expect(blockDuration(540, 630)).toBe(90);
+    expect(blockDuration(540, 550)).toBe(30);
+    expect(blockDuration(540, null)).toBe(45);
+    expect(blockDuration(540, 500)).toBe(45);
+  });
+  it('uzun blok sonraki notu yan şeride iter', () => {
+    const r = layoutDay([
+      { id: 'a', minutes: 540, duration: 120 },
+      { id: 'b', minutes: 600 },
+    ]);
+    expect(r.map((p) => [p.id, p.lane, p.lanes])).toEqual([
+      ['a', 0, 2],
+      ['b', 1, 2],
+    ]);
   });
 });

@@ -120,7 +120,7 @@ describe('repository', () => {
     for (const sql of CREATE_TABLES.filter((q) => !q.includes('idx_entries_series')))
       await driver.execute(
         sql.replace(
-          ',\n    color TEXT,\n    reminder_minutes INTEGER,\n    notification_id TEXT,\n    repeat TEXT,\n    series_id TEXT',
+          ',\n    color TEXT,\n    reminder_minutes INTEGER,\n    notification_id TEXT,\n    repeat TEXT,\n    series_id TEXT,\n    end_time TEXT',
           '',
         ),
       );
@@ -128,8 +128,18 @@ describe('repository', () => {
     await migrate(driver);
     const cols = await driver.execute("SELECT name FROM pragma_table_info('entries')");
     expect(cols.map((c) => c.name)).toEqual(
-      expect.arrayContaining(['color', 'reminder_minutes', 'notification_id', 'repeat', 'series_id']),
+      expect.arrayContaining(['color', 'reminder_minutes', 'notification_id', 'repeat', 'series_id', 'end_time']),
     );
+  });
+
+  it('bitiş saatini saklar; saat yoksa bitiş de yoktur', async () => {
+    const { repo, nb } = await setup();
+    const e = await repo.createEntry(nb.id, { text: 'Toplantı', date: '2026-10-05', time: '09:00', endTime: '10:30' });
+    expect((await repo.getEntry(e.id))?.end_time).toBe('10:30');
+    await repo.setEntryEndTime(e.id, null);
+    expect((await repo.getEntry(e.id))?.end_time).toBeNull();
+    const n = await repo.createEntry(nb.id, { text: 'Saatsiz', date: '2026-10-05', endTime: '11:00' });
+    expect(n.end_time).toBeNull();
   });
 
   it('alarm dakikasını ve bildirim kimliğini saklar', async () => {
@@ -193,7 +203,7 @@ describe('repository', () => {
   it("v3 veri tabanı v4'e yükseltilir", async () => {
     const driver = createNodeDriver();
     for (const sql of CREATE_TABLES.filter((q) => !q.includes('idx_entries_series'))) {
-      await driver.execute(sql.replace(/,\s*repeat TEXT,\s*series_id TEXT/, ''));
+      await driver.execute(sql.replace(/,\s*repeat TEXT,\s*series_id TEXT,\s*end_time TEXT/, ''));
     }
     await driver.execute('PRAGMA user_version = 3');
     await migrate(driver);

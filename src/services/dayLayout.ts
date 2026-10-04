@@ -1,5 +1,5 @@
 // Gün görünümü saat çizelgesinin yerleşimi (saf, birim testli).
-// Notların yalnızca başlangıç saati vardır; her not sabit yükseklikte bir blok olarak çizilir.
+// Notun bitiş saati varsa blok o süre kadar uzar, yoksa sabit yükseklikte çizilir.
 // Üst üste binen bloklar yan yana şeritlere (lane) dizilir.
 
 export const HOUR_HEIGHT = 64; // bir saatin piksel yüksekliği
@@ -13,13 +13,24 @@ export function timeToMinutes(time: string): number {
 export interface Placed {
   id: string;
   minutes: number;
+  /** Bloğun süresi (dakika) */
+  duration: number;
   /** Şerit numarası (soldan) */
   lane: number;
   /** Aynı kümedeki toplam şerit sayısı */
   lanes: number;
 }
 
-export function layoutDay(items: { id: string; minutes: number }[], blockMinutes = BLOCK_MINUTES): Placed[] {
+/** Bloğun görsel süresi: bitiş saati varsa o, yoksa varsayılan; en az 30 dk (okunur kalsın) */
+export function blockDuration(startMinutes: number, endMinutes?: number | null): number {
+  if (endMinutes == null || endMinutes <= startMinutes) return BLOCK_MINUTES;
+  return Math.max(30, endMinutes - startMinutes);
+}
+
+export function layoutDay(
+  items: { id: string; minutes: number; duration?: number }[],
+  blockMinutes = BLOCK_MINUTES,
+): Placed[] {
   const sorted = [...items].sort((a, b) => a.minutes - b.minutes);
   const out: Placed[] = [];
   let cluster: Placed[] = [];
@@ -37,9 +48,10 @@ export function layoutDay(items: { id: string; minutes: number }[], blockMinutes
     if (cluster.length > 0 && it.minutes >= clusterEnd) flush();
     let lane = laneEnds.findIndex((end) => end <= it.minutes);
     if (lane === -1) lane = laneEnds.length;
-    laneEnds[lane] = it.minutes + blockMinutes;
-    clusterEnd = Math.max(clusterEnd, it.minutes + blockMinutes);
-    cluster.push({ id: it.id, minutes: it.minutes, lane, lanes: 1 });
+    const duration = it.duration ?? blockMinutes;
+    laneEnds[lane] = it.minutes + duration;
+    clusterEnd = Math.max(clusterEnd, it.minutes + duration);
+    cluster.push({ id: it.id, minutes: it.minutes, duration, lane, lanes: 1 });
   }
   flush();
   return out;

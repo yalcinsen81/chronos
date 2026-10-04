@@ -37,6 +37,7 @@ const toEntry = (r: Row): EntryWithDate => ({
   id: String(r.id),
   page_id: (r.page_id as string | null) ?? null,
   time_slot: (r.time_slot as string | null) ?? null,
+  end_time: (r.end_time as string | null) ?? null,
   text_content: String(r.text_content),
   is_completed: Number(r.is_completed) === 1,
   audio_path: (r.audio_path as string | null) ?? null,
@@ -134,6 +135,8 @@ export function createRepository(db: SqlDriver) {
     audioPath?: string | null;
     color?: string | null;
     reminderMinutes?: number | null;
+    /** Bitiş saati "HH:mm" (süre) */
+    endTime?: string | null;
     repeat?: string | null;
     /** Tekrar zincirinin kimliği; verilmeden repeat verilirse not zincirin ilk üyesidir */
     seriesId?: string | null;
@@ -147,6 +150,7 @@ export function createRepository(db: SqlDriver) {
       id,
       page_id: page?.id ?? null,
       time_slot: input.time ?? null,
+      end_time: input.time ? (input.endTime ?? null) : null,
       text_content: input.text.trim(),
       is_completed: false,
       audio_path: input.audioPath ?? null,
@@ -160,8 +164,8 @@ export function createRepository(db: SqlDriver) {
       date: input.date ?? null,
     };
     await db.execute(
-      `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, audio_path, is_inbox, created_at, color, reminder_minutes, repeat, series_id)
-       VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, audio_path, is_inbox, created_at, color, reminder_minutes, repeat, series_id, end_time)
+       VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         entry.id,
         entry.page_id,
@@ -174,6 +178,7 @@ export function createRepository(db: SqlDriver) {
         entry.reminder_minutes,
         entry.repeat,
         entry.series_id,
+        entry.end_time,
       ],
     );
     return entry;
@@ -238,6 +243,10 @@ export function createRepository(db: SqlDriver) {
   /** Notun metnini ve saatini günceller (satır içi düzenleme). */
   async function updateEntry(entryId: string, text: string, time: string | null) {
     await db.execute('UPDATE entries SET text_content = ?, time_slot = ? WHERE id = ?', [text.trim(), time, entryId]);
+  }
+
+  async function setEntryEndTime(entryId: string, endTime: string | null) {
+    await db.execute('UPDATE entries SET end_time = ? WHERE id = ?', [endTime, entryId]);
   }
 
   async function setEntryReminder(entryId: string, minutes: number | null) {
@@ -339,6 +348,7 @@ export function createRepository(db: SqlDriver) {
       id: string;
       date: ISODate;
       time: string | null;
+      end?: string | null;
       text: string;
       done: boolean;
       color: string | null;
@@ -353,9 +363,21 @@ export function createRepository(db: SqlDriver) {
       if (await getEntry(e.id)) continue;
       const page = await getOrCreatePage(notebookId, e.date);
       await db.execute(
-        `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, is_inbox, created_at, color, reminder_minutes, repeat, series_id)
-         VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
-        [e.id, page.id, e.time, e.text, e.done ? 1 : 0, e.created, e.color, e.reminder, e.repeat, e.series],
+        `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, is_inbox, created_at, color, reminder_minutes, repeat, series_id, end_time)
+         VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`,
+        [
+          e.id,
+          page.id,
+          e.time,
+          e.text,
+          e.done ? 1 : 0,
+          e.created,
+          e.color,
+          e.reminder,
+          e.repeat,
+          e.series,
+          e.time ? (e.end ?? null) : null,
+        ],
       );
       added.push(e.id);
     }
@@ -375,6 +397,7 @@ export function createRepository(db: SqlDriver) {
     addStroke,
     deleteStroke,
     createEntry,
+    setEntryEndTime,
     listEntriesForDate,
     listEntriesBetween,
     countEntriesByDate,

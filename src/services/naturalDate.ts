@@ -8,6 +8,7 @@ import { parseNote } from './notes';
 export interface SmartNote {
   text: string;
   time: string | null; // "HH:mm"
+  endTime: string | null; // "HH:mm" (14:00-15:30 gibi aralık yazıldıysa)
   date: ISODate | null; // null: metinde gün ifadesi yok, çağıran kendi gününü kullanır
 }
 
@@ -117,12 +118,33 @@ function takeTimeWords(raw: string): { text: string; time: string } | null {
   return null;
 }
 
+const HM = '([01]?\\d|2[0-3])[:.]([0-5]\\d)';
+const RANGE_LEAD = new RegExp(`^\\s*${HM}\\s*[-–]\\s*${HM}\\s+`);
+const RANGE_TRAIL = new RegExp(`\\s+${HM}\\s*[-–]\\s*${HM}\\s*$`);
+const hm = (h: string, m: string) => `${h.padStart(2, '0')}:${m}`;
+
+/** "14:00-15:30 toplantı" ya da "toplantı 14.00–15.30": başlangıç ve bitiş saati */
+function takeRange(raw: string): { text: string; time: string; endTime: string } | null {
+  for (const re of [RANGE_LEAD, RANGE_TRAIL]) {
+    const m = raw.match(re);
+    if (!m) continue;
+    const time = hm(m[1], m[2]);
+    const endTime = hm(m[3], m[4]);
+    const text = raw.replace(re, '').trim();
+    if (text && endTime > time) return { text, time, endTime };
+  }
+  return null;
+}
+
 export function parseSmart(input: string, today: ISODate = todayISO()): SmartNote {
   let text = input.trim();
   let date: ISODate | null = null;
   const d1 = takeDate(text, today);
   if (d1) ({ text, date } = d1);
-  const t = parseNote(text);
+  let endTime: string | null = null;
+  const r = takeRange(text);
+  const t = r ? { text: r.text, time: r.time as string | null } : parseNote(text);
+  if (r) endTime = r.endTime;
   text = t.text;
   if (!t.time) {
     const w = takeTimeWords(text);
@@ -135,5 +157,5 @@ export function parseSmart(input: string, today: ISODate = todayISO()): SmartNot
     const d2 = takeDate(text, today);
     if (d2) ({ text, date } = d2);
   }
-  return { text, time: t.time, date };
+  return { text, time: t.time, endTime, date };
 }

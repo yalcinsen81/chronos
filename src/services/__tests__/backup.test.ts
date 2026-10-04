@@ -6,6 +6,7 @@ const entry = (o: Partial<EntryWithDate>): EntryWithDate => ({
   id: 'a',
   page_id: 'p',
   time_slot: null,
+  end_time: null,
   text_content: 'Not',
   is_completed: false,
   audio_path: null,

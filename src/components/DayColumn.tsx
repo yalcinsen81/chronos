@@ -12,6 +12,7 @@ import Animated, {
   LinearTransition,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -62,8 +63,8 @@ export default function DayColumn({
     if (!value) return;
     setDraft('');
     // "yarın 15:00 diş hekimi" gibi yazılanlar gün ve saati kendisi bulur
-    const { text, time, date: when } = parseSmart(value);
-    await saveNote({ text, time, color: null, reminder: null, date: when ?? date });
+    const { text, time, endTime, date: when } = parseSmart(value);
+    await saveNote({ text, time, endTime, color: null, reminder: null, date: when ?? date });
     if (when && when !== date) selectDate(when);
     else inputRef.current?.focus();
   };
@@ -117,7 +118,15 @@ export default function DayColumn({
             )}
           </View>
         </View>
-        <View style={[styles.headerRule, { backgroundColor: isToday ? c.accent : c.separator }]} />
+        {/* İnce çizgi günün doluluğunu gösterir: 8 açık notta tamamen dolar */}
+        <View style={[styles.headerRule, { backgroundColor: isToday ? c.accentSoft : c.separator }]}>
+          <View
+            style={[
+              styles.headerFill,
+              { backgroundColor: isToday ? c.accent : c.textFaint, width: `${Math.min(1, open / 8) * 100}%` },
+            ]}
+          />
+        </View>
       </View>
 
       <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -216,12 +225,27 @@ export function TaskLine({
   index?: number; // sıra: satırlar sırayla (kademeli) belirir
 }) {
   const c = usePalette();
-  const { toggleNote, openMenu, density } = useAgenda();
+  const { toggleNote, openMenu, density, selection, toggleSelect, selecting } = useAgenda();
+  const selected = selection.includes(note.id);
   const { title, body } = splitNote(note.text_content);
   const tint = tagColor(note.color, c);
   const done = note.is_completed;
   const alarm = note.reminder_minutes != null && !done;
   const sub = checklistProgress(body);
+  // Tamamlanınca satır hafifçe küçülüp yaylanarak yerine döner
+  const pop = useSharedValue(1);
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    if (done) {
+      pop.value = 0.97;
+      pop.value = withSpring(1, { damping: 8, stiffness: 220 });
+    }
+  }, [done, pop]);
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
 
   return (
     <Animated.View
@@ -231,49 +255,52 @@ export function TaskLine({
       exiting={FadeOut.duration(120)}
       layout={LinearTransition.springify().damping(20)}
     >
-      <Pressable
-        onPress={() => onOpen()}
-        onLongPress={() => openMenu(note)}
-        delayLongPress={380}
-        style={({ pressed }) => [
-          styles.line,
-          styles.task,
-          { borderBottomColor: c.separator, height: lineHeightFor(density) },
-          tint && { backgroundColor: tint + (c.scheme === 'dark' ? '2E' : '1F') },
-          pressed && { opacity: 0.6 },
-        ]}
-        accessibilityHint="Ayrıntılar için dokun, menü için uzun bas"
-      >
-        <Checkbox checked={done} onPress={() => toggleNote(note.id)} tint={tint} size={18} />
-        {note.time_slot && (
-          <Text style={[Type.caption, styles.time, { color: done ? c.textFaint : (tint ?? c.accent) }]}>
-            {note.time_slot}
-          </Text>
-        )}
-        <StrikeText text={title || body} done={done} style={Type.sub} color={c.text} lineColor={c.textFaint} />
-        {sub.total > 0 && (
-          <Text
-            style={[Type.micro, { color: c.textFaint }]}
-            accessibilityLabel={`${sub.done} / ${sub.total} alt görev`}
-          >
-            {sub.done}/{sub.total}
-          </Text>
-        )}
-        {Boolean(title && body) && <Ionicons name="document-text-outline" size={14} color={c.textFaint} />}
-        {note.repeat && <Ionicons name="repeat" size={14} color={c.textFaint} accessibilityLabel="Tekrarlanıyor" />}
-        {/* Saati olan notta zil her zaman görünür: tek dokunuşla alarm kurulur */}
-        {!done && (alarm || note.time_slot) && (
-          <Pressable
-            onPress={() => onOpen(true)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={alarm ? `Alarm ${reminderLabel(note.reminder_minutes)}` : 'Alarm kur'}
-            style={[styles.bell, alarm && { backgroundColor: c.accentSoft }]}
-          >
-            <Bell active={alarm} color={alarm ? c.accent : c.textFaint} />
-          </Pressable>
-        )}
-      </Pressable>
+      <Animated.View style={popStyle}>
+        <Pressable
+          onPress={() => (selecting ? toggleSelect(note.id) : onOpen())}
+          onLongPress={() => (selecting ? toggleSelect(note.id) : openMenu(note))}
+          delayLongPress={380}
+          style={({ pressed }) => [
+            styles.line,
+            styles.task,
+            { borderBottomColor: c.separator, height: lineHeightFor(density) },
+            tint && { backgroundColor: tint + (c.scheme === 'dark' ? '2E' : '1F') },
+            selected && { backgroundColor: c.accentSoft, borderColor: c.accent, borderWidth: 1.5 },
+            pressed && { opacity: 0.6 },
+          ]}
+          accessibilityHint="Ayrıntılar için dokun, menü için uzun bas"
+        >
+          <Checkbox checked={done} onPress={() => toggleNote(note.id)} tint={tint} size={18} />
+          {note.time_slot && (
+            <Text style={[Type.caption, styles.time, { color: done ? c.textFaint : (tint ?? c.accent) }]}>
+              {note.time_slot}
+            </Text>
+          )}
+          <StrikeText text={title || body} done={done} style={Type.sub} color={c.text} lineColor={c.textFaint} />
+          {sub.total > 0 && (
+            <Text
+              style={[Type.micro, { color: c.textFaint }]}
+              accessibilityLabel={`${sub.done} / ${sub.total} alt görev`}
+            >
+              {sub.done}/{sub.total}
+            </Text>
+          )}
+          {Boolean(title && body) && <Ionicons name="document-text-outline" size={14} color={c.textFaint} />}
+          {note.repeat && <Ionicons name="repeat" size={14} color={c.textFaint} accessibilityLabel="Tekrarlanıyor" />}
+          {/* Saati olan notta zil her zaman görünür: tek dokunuşla alarm kurulur */}
+          {!done && (alarm || note.time_slot) && (
+            <Pressable
+              onPress={() => onOpen(true)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={alarm ? `Alarm ${reminderLabel(note.reminder_minutes)}` : 'Alarm kur'}
+              style={[styles.bell, alarm && { backgroundColor: c.accentSoft }]}
+            >
+              <Bell active={alarm} color={alarm ? c.accent : c.textFaint} />
+            </Pressable>
+          )}
+        </Pressable>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -305,7 +332,8 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: Radius.pill,
   },
-  headerRule: { height: 2, marginTop: Space.sm, borderRadius: 1 },
+  headerRule: { height: 2, marginTop: Space.sm, borderRadius: 1, overflow: 'hidden' },
+  headerFill: { height: 2, borderRadius: 1 },
   line: {
     height: LINE_HEIGHT,
     flexDirection: 'row',

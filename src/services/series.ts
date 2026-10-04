@@ -15,6 +15,7 @@ export async function materializeSeries(repo: Repository, notebookId: string, un
         text: tail.text_content,
         date: day,
         time: tail.time_slot,
+        endTime: tail.end_time,
         color: tail.color,
         reminderMinutes: tail.reminder_minutes,
         repeat: tail.repeat,

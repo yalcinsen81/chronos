@@ -22,6 +22,8 @@ import CalendarView from './CalendarView';
 import PressScale from './PressScale';
 import SearchSheet from './SearchSheet';
 import SettingsSheet from './SettingsSheet';
+import TemplatesSheet from './TemplatesSheet';
+import TodaySheet from './TodaySheet';
 
 export default function WeekHeader({
   showStrip,
@@ -39,6 +41,8 @@ export default function WeekHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [todayOpen, setTodayOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   // Şerit görünürken oklar şeridin iki ucundadır (dar ekranda üst çubuk sığsın); yoksa üst çubukta durur
   const arrowsInStrip = showStrip;
   const today = todayISO();
@@ -198,6 +202,8 @@ export default function WeekHeader({
             {(
               [
                 { icon: 'search', label: 'Ara', run: () => setSearchOpen(true) },
+                { icon: 'today-outline', label: 'Bugün listesi', run: () => setTodayOpen(true) },
+                { icon: 'copy-outline', label: 'Şablonlar', run: () => setTemplatesOpen(true) },
                 { icon: 'settings-outline', label: 'Ayarlar', run: () => setSettingsOpen(true) },
               ] as const
             ).map((it) => (
@@ -219,6 +225,8 @@ export default function WeekHeader({
         </Pressable>
       </Modal>
       <SearchSheet visible={searchOpen} onClose={() => setSearchOpen(false)} onOpenNote={onOpenNote} />
+      <TodaySheet visible={todayOpen} onClose={() => setTodayOpen(false)} onOpenNote={onOpenNote} />
+      <TemplatesSheet visible={templatesOpen} onClose={() => setTemplatesOpen(false)} />
       <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </View>
   );

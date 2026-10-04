@@ -28,13 +28,15 @@ import DayView from './DayView';
 import NoteSheet, { type NoteDraft } from './NoteSheet';
 import PressScale from './PressScale';
 import RowMenu from './RowMenu';
+import SelectionBar from './SelectionBar';
+import UndoBar from './UndoBar';
 import WeekHeader from './WeekHeader';
 
 export default function AgendaScreen() {
   const c = usePalette();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
-  const { date, weekStart, weekDays, weekNotes, selectDate, view, menuNote } = useAgenda();
+  const { date, weekStart, weekDays, weekNotes, selectDate, view, menuNote, selecting } = useAgenda();
   const [openNote, setOpenNote] = useState<EntryWithDate | null>(null);
   const [alarmFirst, setAlarmFirst] = useState(false);
   const [draft, setDraft] = useState<NoteDraft | null>(null);
@@ -106,7 +108,7 @@ export default function AgendaScreen() {
           </Animated.View>
         )}
       </KeyboardAvoidingView>
-      {!wide && !typing && current === null && draft === null && (
+      {!wide && !typing && !selecting && current === null && draft === null && (
         <Animated.View entering={ZoomIn.duration(220)} style={styles.fabWrap} pointerEvents="box-none">
           <PressScale
             haptic
@@ -120,6 +122,8 @@ export default function AgendaScreen() {
           </PressScale>
         </Animated.View>
       )}
+      <UndoBar />
+      <SelectionBar />
       <RowMenu onEdit={() => menuNote && open(menuNote)} />
       <NoteSheet
         note={current}

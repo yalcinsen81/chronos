@@ -131,37 +131,51 @@ export function isAccentKey(v: string | null | undefined): v is AccentKey {
   return Boolean(v) && v! in AccentThemes;
 }
 
-// Seçili vurgu rengi küçük bir dış depodadır; değişince usePalette kullanan her bileşen yenilenir
+// Seçili vurgu rengi ve "saf siyah" tercihi küçük bir dış depodadır; değişince usePalette kullanan her bileşen yenilenir
 let accentKey: AccentKey = DEFAULT_ACCENT;
+let pureBlack = false;
 const listeners = new Set<() => void>();
+const notify = () => listeners.forEach((l) => l());
 
 export function setAccentKey(key: AccentKey) {
   if (key === accentKey) return;
   accentKey = key;
-  listeners.forEach((l) => l());
+  notify();
 }
 
-function useAccentKey(): AccentKey {
-  return useSyncExternalStore(
+/** Koyu temada zemini tam siyah yapar (OLED ekranlarda pil ve gece konforu) */
+export function setPureBlack(on: boolean) {
+  if (on === pureBlack) return;
+  pureBlack = on;
+  notify();
+}
+
+const prefsSnapshot = () => `${accentKey}${pureBlack ? '+black' : ''}`;
+
+function usePrefs(): { key: AccentKey; black: boolean } {
+  const snap = useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    () => accentKey,
+    prefsSnapshot,
     () => DEFAULT_ACCENT,
   );
+  return { key: snap.replace('+black', '') as AccentKey, black: snap.endsWith('+black') };
 }
 
 const paletteCache = new Map<string, Palette>();
 
-export function paletteFor(scheme: 'light' | 'dark', key: AccentKey): Palette {
-  const id = `${scheme}:${key}`;
+export function paletteFor(scheme: 'light' | 'dark', key: AccentKey, black = false): Palette {
+  const black2 = black && scheme === 'dark';
+  const id = `${scheme}:${key}:${black2}`;
   let p = paletteCache.get(id);
   if (!p) {
     const a = AccentThemes[key];
     const base = scheme === 'dark' ? DarkPalette : LightPalette;
     const accent = scheme === 'dark' ? a.dark : a.light;
     p = { ...base, accent, today: accent, accentSoft: scheme === 'dark' ? a.softDark : a.softLight };
+    if (black2) p = { ...p, bg: '#000000', sidebar: '#000000', card: '#141414', fill: '#1C1C1C', separator: '#262626' };
     paletteCache.set(id, p);
   }
   return p;
@@ -169,5 +183,6 @@ export function paletteFor(scheme: 'light' | 'dark', key: AccentKey): Palette {
 
 export function usePalette(): Palette {
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  return paletteFor(scheme, useAccentKey());
+  const { key, black } = usePrefs();
+  return paletteFor(scheme, key, black);
 }
