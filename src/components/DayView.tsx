@@ -167,8 +167,8 @@ export default function DayView({
               hint={date < today ? 'Bu güne not eklenmemiş.' : 'Aşağıya yaz ya da bir saate dokun.'}
             />
           )}
-          {untimed.map((n) => (
-            <TaskLine key={n.id} note={n} onOpen={(alarm) => onOpen(n, alarm)} />
+          {untimed.map((n, i) => (
+            <TaskLine key={n.id} note={n} index={i} onOpen={(alarm) => onOpen(n, alarm)} />
           ))}
           <View style={[styles.addLine, { borderBottomColor: c.separator }]}>
             <TextInput

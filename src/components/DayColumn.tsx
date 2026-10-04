@@ -5,7 +5,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
@@ -126,8 +126,8 @@ export default function DayColumn({
             hint={isPast ? 'Bu güne not eklenmemiş.' : 'Aşağıdaki satıra dokun, yaz, Enter.'}
           />
         )}
-        {notes.map((n) => (
-          <TaskLine key={n.id} note={n} onOpen={(alarm) => onOpen(n, alarm)} />
+        {notes.map((n, i) => (
+          <TaskLine key={n.id} note={n} index={i} onOpen={(alarm) => onOpen(n, alarm)} />
         ))}
 
         <View style={[styles.line, { borderBottomColor: c.separator }]}>
@@ -164,7 +164,15 @@ export default function DayColumn({
   );
 }
 
-export function TaskLine({ note, onOpen }: { note: EntryWithDate; onOpen: (alarm?: boolean) => void }) {
+export function TaskLine({
+  note,
+  onOpen,
+  index = 0,
+}: {
+  note: EntryWithDate;
+  onOpen: (alarm?: boolean) => void;
+  index?: number; // sıra: satırlar sırayla (kademeli) belirir
+}) {
   const c = usePalette();
   const { toggleNote, openMenu } = useAgenda();
   const { title, body } = splitNote(note.text_content);
@@ -174,7 +182,7 @@ export function TaskLine({ note, onOpen }: { note: EntryWithDate; onOpen: (alarm
 
   return (
     <Animated.View
-      entering={FadeIn.duration(180)}
+      entering={FadeInDown.duration(240).delay(Math.min(index, 8) * 40)}
       exiting={FadeOut.duration(120)}
       layout={LinearTransition.duration(180)}
     >

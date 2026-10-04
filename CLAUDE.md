@@ -72,6 +72,7 @@ src/
     çünkü telefonda yatay kaydırma gün sayfalarına aittir. Sürükle-bırak ve ana ekran widget'ı yapılmadı (Expo Go'da yok / doğrulanamadı).
 15. **Işıltılı arka plan** (`Aurora.tsx`) yalnızca SVG radyal gradyan + reanimated kullanır; three.js/WebGL eklenmez (Expo Go, boyut, okunabilirlik).
     Ayar `settings.aurora`.
+16. **Kademeli giriş:** `TaskLine` satırları `index` ile sırayla belirir (FadeInDown + gecikme, en çok 8 adım); gün şeridinde seçili gün yaylanarak büyür.
 
 ## Komutlar
 

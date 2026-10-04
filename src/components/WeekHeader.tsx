@@ -3,6 +3,7 @@
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Radius, Space, Type, usePalette, WIDE_BREAKPOINT } from '../constants/theme';
@@ -139,7 +140,11 @@ export default function WeekHeader({
                 <Text style={[Type.micro, { color: c.textFaint }]}>
                   {TR_WEEKDAYS_SHORT[i].toLocaleUpperCase('tr-TR')}
                 </Text>
-                <View style={[styles.stripNum, selected && { backgroundColor: c.accent }]}>
+                <Animated.View
+                  key={selected ? 'on' : 'off'}
+                  entering={selected ? ZoomIn.springify().damping(13) : undefined}
+                  style={[styles.stripNum, selected && { backgroundColor: c.accent }]}
+                >
                   <Text
                     style={[
                       Type.bodyBold,
@@ -151,7 +156,7 @@ export default function WeekHeader({
                   >
                     {fromISODate(d).getDate()}
                   </Text>
-                </View>
+                </Animated.View>
                 <View style={[styles.dot, { backgroundColor: has ? c.textFaint : 'transparent' }]} />
               </Pressable>
             );
