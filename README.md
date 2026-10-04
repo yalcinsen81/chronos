@@ -47,7 +47,7 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
   bildirime dokunmak o günün görünümünü açar. Tekrarlayan notların alarmları yalnızca 21 gün öncesinden kurulur
   (iOS en çok 64 bekleyen bildirim tutar); uygulamayı en az üç haftada bir açman yeterli. Tarayıcı önizlemesinde alarm çalmaz.
 - **Doğal dille ekleme:** satıra `yarın 15:00 diş hekimi`, `cuma toplantı 10.30`, `3 gün sonra rapor`, `haftaya salı sunum`
-  ya da `15 Ekim doğum günü` yaz; gün ve saati kendisi bulur (not o güne eklenir, görünüm oraya geçer). Gün adı ya da bugün/yarın
+  `saat 3 te toplantı` ya da `15 Ekim doğum günü` yaz; gün ve saati kendisi bulur (not o güne eklenir, görünüm oraya geçer). Gün adı ya da bugün/yarın
   yalnızca metnin başında ya da sonunda aranır.
 - **Alt görevler:** kartta *Alt görev ekle* ile küçük maddeler; satırda `2/4` olarak görünür. Maddeler açıklamada `[ ] madde`
   satırları olarak saklanır.

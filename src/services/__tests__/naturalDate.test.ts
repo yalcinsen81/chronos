@@ -33,6 +33,20 @@ describe('parseSmart', () => {
     expect(parseSmart('yarın', T)).toEqual({ text: 'yarın', time: null, date: null });
     expect(parseSmart('Bu cuma namazı hazırlığı', T).date).toBeNull();
   });
+  it('sözcükle yazılan saat: saat 3 te toplantı', () => {
+    expect(parseSmart('saat 3 te toplantı', T)).toEqual({ text: 'toplantı', time: '15:00', date: null });
+    expect(parseSmart("saat 3'te toplantı", T).time).toBe('15:00');
+    expect(parseSmart('toplantı saat 3 buçuk', T)).toEqual({ text: 'toplantı', time: '15:30', date: null });
+    expect(parseSmart('saat 9 da kahvaltı', T).time).toBe('09:00');
+    expect(parseSmart('akşam 8de yemek', T).time).toBe('20:00');
+    expect(parseSmart('sabah 6 da koşu', T).time).toBe('06:00');
+    expect(parseSmart('yarın saat 4 te sunum', T)).toEqual({ text: 'sunum', time: '16:00', date: '2026-10-05' });
+    expect(parseSmart('toplantı 3te', T)).toEqual({ text: 'toplantı', time: '15:00', date: null });
+  });
+  it('tek başına sayı saat sayılmaz', () => {
+    expect(parseSmart('3 elma al', T)).toEqual({ text: '3 elma al', time: null, date: null });
+    expect(parseSmart('Kitap 12', T).time).toBeNull();
+  });
   it('yalnızca saat eski davranışla çalışır', () => {
     expect(parseSmart('14:30 Diş hekimi', T)).toEqual({ text: 'Diş hekimi', time: '14:30', date: null });
   });

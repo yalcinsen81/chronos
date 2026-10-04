@@ -11,7 +11,8 @@ import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-re
 import { NOTE_TAG_KEYS, NoteTags, Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
 import { joinChecklist, splitChecklist, type ChecklistItem } from '../services/checklist';
-import { joinNote, normalizeTime, parseNote, splitNote } from '../services/notes';
+import { parseSmart } from '../services/naturalDate';
+import { joinNote, normalizeTime, splitNote } from '../services/notes';
 import { remindersSupported, requestReminderPermission } from '../services/reminders';
 import { addDays, todayISO, type ISODate } from '../services/calendar';
 import { REMINDER_OPTIONS, reminderLabel } from '../services/reminderTime';
@@ -75,7 +76,7 @@ export default function NoteEditor({
     }
     let ttl = title;
     if (t === null) {
-      const p = parseNote(title);
+      const p = parseSmart(title);
       ttl = p.text;
       t = p.time;
     }
@@ -114,7 +115,7 @@ export default function NoteEditor({
       setAlarmHint(null);
       return;
     }
-    if (!time.trim() && !parseNote(title).time) setAlarmHint('Alarm için saat gir');
+    if (!time.trim() && !parseSmart(title).time) setAlarmHint('Alarm için saat gir');
     else if (!remindersSupported) setAlarmHint('Tarayıcı önizlemesinde alarm çalmaz; telefonda çalar.');
     else
       setAlarmHint((await requestReminderPermission()) ? null : "Bildirim izni kapalı. Ayarlar > Bildirimler'den aç.");

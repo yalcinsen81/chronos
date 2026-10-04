@@ -89,6 +89,34 @@ function takeDate(raw: string, today: ISODate): { text: string; date: ISODate } 
   return null;
 }
 
+/** "saat 3 te", "3'te", "akşam 8de", "saat 3 buçuk": gün içi saati ayıklar. Sayı tek başına saat sayılmaz; "saat", ek ('te/de) ya da gün dilimi şart. */
+function takeTimeWords(raw: string): { text: string; time: string } | null {
+  const f = fold(raw);
+  if (f.length !== raw.length) return null;
+  const core =
+    "(?:(sabah|aksam|gece|ogleden sonra|oglen)\\s+)?(saat\\s+)?(\\d{1,2})(?:[:.]([0-5]\\d))?\\s*(?:['’]\\s*)?(te|de|ta|da)?(?:\\s+(bucuk))?";
+  for (const anchor of [new RegExp(`^${core}\\s+`), new RegExp(`\\s+${core}$`)]) {
+    const m = f.match(anchor);
+    if (!m) continue;
+    const [, period, saat, hh, mm, suffix, bucuk] = m;
+    if (!period && !saat && !suffix) continue; // yalnızca bir sayı: saat değil
+    let h = Number(hh);
+    if (h > 23) continue;
+    const min = mm ? Number(mm) : bucuk ? 30 : 0;
+    // 12 saatlik söyleniş: gün dilimi yoksa 1-6 öğleden sonra, 7-11 sabah sayılır
+    if (period === 'aksam' || period === 'ogleden sonra') {
+      if (h < 12) h += 12;
+    } else if (period === 'gece') {
+      if (h === 12) h = 0;
+      else if (h >= 6 && h < 12) h += 12;
+    } else if (!period && !mm && h >= 1 && h <= 6) h += 12;
+    const text = (raw.slice(0, m.index) + raw.slice((m.index ?? 0) + m[0].length)).trim();
+    if (!text) continue;
+    return { text, time: `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}` };
+  }
+  return null;
+}
+
 export function parseSmart(input: string, today: ISODate = todayISO()): SmartNote {
   let text = input.trim();
   let date: ISODate | null = null;
@@ -96,6 +124,13 @@ export function parseSmart(input: string, today: ISODate = todayISO()): SmartNot
   if (d1) ({ text, date } = d1);
   const t = parseNote(text);
   text = t.text;
+  if (!t.time) {
+    const w = takeTimeWords(text);
+    if (w) {
+      text = w.text;
+      t.time = w.time;
+    }
+  }
   if (!date) {
     const d2 = takeDate(text, today);
     if (d2) ({ text, date } = d2);
