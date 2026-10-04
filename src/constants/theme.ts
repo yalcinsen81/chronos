@@ -134,6 +134,9 @@ export function isAccentKey(v: string | null | undefined): v is AccentKey {
 // Seçili vurgu rengi ve "saf siyah" tercihi küçük bir dış depodadır; değişince usePalette kullanan her bileşen yenilenir
 let accentKey: AccentKey = DEFAULT_ACCENT;
 let pureBlack = false;
+/** Görünüm: sistemi izle ya da elle açık/koyu */
+export type Appearance = 'system' | 'light' | 'dark';
+let appearance: Appearance = 'system';
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((l) => l());
 
@@ -150,18 +153,29 @@ export function setPureBlack(on: boolean) {
   notify();
 }
 
-const prefsSnapshot = () => `${accentKey}${pureBlack ? '+black' : ''}`;
+export function setAppearance(mode: Appearance) {
+  if (mode === appearance) return;
+  appearance = mode;
+  notify();
+}
 
-function usePrefs(): { key: AccentKey; black: boolean } {
+export function useAppearance(): Appearance {
+  return usePrefs().mode;
+}
+
+const prefsSnapshot = () => `${accentKey}|${pureBlack ? 'black' : ''}|${appearance}`;
+
+function usePrefs(): { key: AccentKey; black: boolean; mode: Appearance } {
   const snap = useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
     prefsSnapshot,
-    () => DEFAULT_ACCENT,
+    () => `${DEFAULT_ACCENT}||system`,
   );
-  return { key: snap.replace('+black', '') as AccentKey, black: snap.endsWith('+black') };
+  const [key, black, mode] = snap.split('|');
+  return { key: key as AccentKey, black: black === 'black', mode: (mode || 'system') as Appearance };
 }
 
 const paletteCache = new Map<string, Palette>();
@@ -182,7 +196,7 @@ export function paletteFor(scheme: 'light' | 'dark', key: AccentKey, black = fal
 }
 
 export function usePalette(): Palette {
-  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
-  const { key, black } = usePrefs();
-  return paletteFor(scheme, key, black);
+  const system = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const { key, black, mode } = usePrefs();
+  return paletteFor(mode === 'system' ? system : mode, key, black);
 }

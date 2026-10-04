@@ -7,7 +7,14 @@ import type { SqlDriver } from '../db/driver';
 import { migrate } from '../db/migrate';
 import { createRepository, type EntryWithDate, type Repository } from '../db/repository';
 import { addDays, startOfWeek, todayISO, type ISODate } from '../services/calendar';
-import { setAccentKey, setPureBlack, isAccentKey, type AccentKey } from '../constants/theme';
+import {
+  setAccentKey,
+  setAppearance,
+  setPureBlack,
+  isAccentKey,
+  type AccentKey,
+  type Appearance,
+} from '../constants/theme';
 import { buildBackup, parseBackup } from '../services/backup';
 import { haptics } from '../services/haptics';
 import {
@@ -99,6 +106,9 @@ interface AgendaState {
   bulkComplete: () => Promise<void>;
   bulkMove: (target: ISODate) => Promise<void>;
   bulkDelete: () => Promise<void>;
+  /** Görünüm: sistem / açık / koyu */
+  appearance: Appearance;
+  setAppearanceMode: (mode: Appearance) => Promise<void>;
   /** Koyu temada saf siyah zemin */
   pureBlack: boolean;
   setBlack: (on: boolean) => Promise<void>;
@@ -135,6 +145,7 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   const [undo, setUndo] = useState<UndoAction | null>(null);
   const [selection, setSelection] = useState<string[]>([]);
   const [pureBlack, setPureBlackState] = useState(false);
+  const [appearance, setAppearanceState] = useState<Appearance>('system');
   const [density, setDensityState] = useState<Density>('rahat');
   const [summaryHour, setSummaryHourState] = useState<number | null>(null);
   const [menuNote, setMenuNote] = useState<EntryWithDate | null>(null);
@@ -172,6 +183,11 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
       if (isAccentKey(savedAccent)) {
         setAccentKey(savedAccent);
         setAccentState(savedAccent);
+      }
+      const savedMode = await repo.getSetting('appearance');
+      if (savedMode === 'light' || savedMode === 'dark') {
+        setAppearance(savedMode);
+        setAppearanceState(savedMode);
       }
       if ((await repo.getSetting('pureBlack')) === '1') {
         setPureBlack(true);
@@ -439,6 +455,16 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     [repo],
   );
 
+  const setAppearanceMode = useCallback(
+    async (mode: Appearance) => {
+      setAppearance(mode);
+      setAppearanceState(mode);
+      haptics.select();
+      await repo.setSetting('appearance', mode);
+    },
+    [repo],
+  );
+
   const setBlack = useCallback(
     async (on: boolean) => {
       setPureBlack(on);
@@ -537,6 +563,8 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     revision,
     accent,
     setAccent,
+    appearance,
+    setAppearanceMode,
     pureBlack,
     setBlack,
     undo,

@@ -61,6 +61,7 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
 - **Bugün listesi (⋯ menüsü):** geciken (son 60 gün) ve bugünkü açık notlar tek listede; her birini *Bugüne / Yarına* al ya da "Hepsini bugüne al".
 - **Şablonlar (⋯ menüsü):** sık kullanılan listeleri (ör. alışveriş, sabah rutini) kaydet; seçili güne alt görevleriyle eklenir.
 - **Bağlantılar:** notta `https://...` varsa kartta çip olarak görünür, dokununca açılır.
+- **Görünüm:** Ayarlar → Sistem / Açık / Koyu (elle seçilebilir).
 - **Saf siyah:** Ayarlar'dan koyu temada tam siyah zemin (OLED). Hafta sütun başlığındaki ince çizgi günün doluluğunu gösterir.
 - **Satır sıklığı:** Ayarlar'dan *Rahat* ya da *Sıkı*.
 - **Uzun bas menüsü:** nota (satır ya da gün çizelgesindeki blok) uzun basınca *Düzenle, Tamamla/Geri al, Bugüne taşı, Yarına taşı, Sil*.

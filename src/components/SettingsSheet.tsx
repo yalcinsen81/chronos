@@ -20,6 +20,8 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
     importBackup,
     pureBlack,
     setBlack,
+    appearance,
+    setAppearanceMode,
     density,
     setDensity,
     summaryHour,
@@ -111,6 +113,27 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
               })}
             </View>
 
+            <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>GÖRÜNÜM</Text>
+            <View style={styles.btnRow}>
+              <Pill
+                icon="phone-portrait-outline"
+                label="Sistem"
+                active={appearance === 'system'}
+                onPress={() => setAppearanceMode('system')}
+              />
+              <Pill
+                icon="sunny-outline"
+                label="Açık"
+                active={appearance === 'light'}
+                onPress={() => setAppearanceMode('light')}
+              />
+              <Pill
+                icon="moon-outline"
+                label="Koyu"
+                active={appearance === 'dark'}
+                onPress={() => setAppearanceMode('dark')}
+              />
+            </View>
             <View style={styles.btnRow}>
               <Pill
                 icon={pureBlack ? 'moon' : 'moon-outline'}
