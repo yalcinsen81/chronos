@@ -20,9 +20,10 @@ interface AgendaState {
   /** Herhangi bir not değiştiğinde artar; takvim noktaları buna göre yenilenir */
   revision: number;
   selectDate: (date: ISODate) => void;
-  addNote: (text: string, color?: string | null) => Promise<void>;
+  /** time verilirse metindeki saat ayıklanmaz; verilmezse "14:30 ..." kalıbı aranır */
+  addNote: (text: string, color?: string | null, time?: string | null) => Promise<void>;
   setNoteColor: (id: string, color: string | null) => Promise<void>;
-  updateNote: (id: string, text: string) => Promise<void>;
+  updateNote: (id: string, text: string, time?: string | null) => Promise<void>;
   toggleNote: (id: string) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
 }
@@ -74,9 +75,10 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   }, []);
 
   const addNote = useCallback(
-    async (input: string, color?: string | null) => {
+    async (input: string, color?: string | null, explicitTime?: string | null) => {
       if (!notebookId) return;
-      const { text, time } = parseNote(input);
+      const parsed = explicitTime === undefined ? parseNote(input) : { text: input.trim(), time: explicitTime };
+      const { text, time } = parsed;
       if (!text) return;
       await repo.createEntry(notebookId, { text, time, color, date: dateRef.current });
       haptics.tap();
@@ -86,8 +88,8 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   );
 
   const updateNote = useCallback(
-    async (id: string, input: string) => {
-      const { text, time } = parseNote(input);
+    async (id: string, input: string, explicitTime?: string | null) => {
+      const { text, time } = explicitTime === undefined ? parseNote(input) : { text: input.trim(), time: explicitTime };
       if (!text) return;
       await repo.updateEntry(id, text, time);
       bump();

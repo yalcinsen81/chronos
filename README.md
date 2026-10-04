@@ -1,10 +1,12 @@
 # Chronos
 
-Şık ve sade bir ajanda paneli: takvimden günü seç, o günün notlarını hemen yaz.
+Sade bir ajanda: takvimden günü seç, o günün notlarını hemen yaz. Tasarım dili, iki Apple Design Award
+almış **Things 3**'ten (beyaz alan, büyük gün başlığı, yüzen "+" düğmesi, açılan not kartı) ve takvim
+kısmı **Fantastical** / Apple Takvim'den esinlenir.
 
-| Telefon | Koyu tema | Tablet |
-|---|---|---|
-| ![](docs/screenshots/telefon.png) | ![](docs/screenshots/telefon-koyu.png) | ![](docs/screenshots/tablet.png) |
+| Telefon | Yeni not | Koyu tema | Tablet |
+|---|---|---|---|
+| ![](docs/screenshots/telefon.png) | ![](docs/screenshots/yeni-not.png) | ![](docs/screenshots/telefon-koyu.png) | ![](docs/screenshots/tablet.png) |
 
 ## Telefonda denemek (en kolay yol)
 
@@ -20,14 +22,12 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
 
 ## Kullanım
 
-- Takvimde bir güne dokun; "Yeni not" kartındaki geniş alana yaz (çok satır olabilir) ve "Ekle"ye dokun. Bilgisayarda Ctrl/Cmd + Enter da ekler.
-- Notun başına veya sonuna saat yazarsan saat etiketi olur ve gün içinde sıralanır: `14:30 Diş hekimi`.
-- Kutucuğa dokununca not tamamlanır, metne dokununca düzenlenir, çöp kutusu ile silinir.
-- "Ekle" düğmesinin yanındaki renklerden notun rengini seç; not kartındaki renkli noktaya dokunarak sonradan değiştir.
-- Üstteki kart günün özetini gösterir: not sayısı, tamamlanma yüzdesi ve sıradaki saatli not.
-- Takvim hafta şeridi olarak açılır; takvim simgesiyle tüm ayı aç. Notu olan günlerin altında nokta görünür.
-- "Tümü / Yapılacak / Bitti" sekmeleriyle notları süz. Başka bir gündeyken sağ üstteki düğme bugüne döner.
-- Telefonun açık/koyu temasına otomatik uyar.
+- Üstteki takvimden güne dokun. Takvim hafta şeridi olarak açılır; ay adına dokununca tüm ay açılır.
+- Sağ alttaki mavi **+** düğmesi yeni not kartını açar: başlık, geniş açıklama alanı, saat ve renk etiketi.
+  Saat alanına `930`, `9:30` veya `14` gibi yazabilirsin; boş bırakıp başlığa "14:30 Toplantı" yazmak da olur.
+- Nota dokununca aynı kart açılır; düzenle, rengini değiştir ya da sil. Kutucuk notu tamamlar.
+- Tamamlanan notlar listenin altında gizlenir; "tamamlanan notu göster" ile açılır.
+- Bilgisayarda Ctrl/Cmd + Enter kaydeder, Esc kapatır. Telefonun açık/koyu temasına otomatik uyar.
 
 ## Tarayıcı önizlemesi
 

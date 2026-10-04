@@ -1,135 +1,184 @@
-// Ana panel. Telefonda: selam başlığı, özet kartı, takvim, yeni not kartı ve notlar tek kaydırmada.
-// Tablette: solda özet + aylık takvim, sağda yeni not kartı ve notlar.
+// Ana ekran (Things 3 düzeni). Telefonda: takvim şeridi, büyük gün başlığı, not listesi,
+// tamamlananlar bölümü ve sağ altta yüzen "+" düğmesi. Tablette: solda kenar çubuğunda aylık takvim.
 
-import { useMemo, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect, useMemo, useState } from 'react';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut } from 'react-native-reanimated';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Fonts, Space, usePalette, WIDE_BREAKPOINT } from '../constants/theme';
+import { Radius, Space, Type, usePalette, WIDE_BREAKPOINT } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
-import { fromISODate, todayISO, TR_MONTHS, formatWeekday } from '../services/calendar';
+import { todayISO } from '../services/calendar';
 import { useAgenda } from '../state/AgendaContext';
-import CalendarCard, { IconButton } from './CalendarCard';
-import Composer from './Composer';
-import NoteCard from './NoteCard';
-import { EmptyNotes, NotesHeader, type NoteFilter } from './NotesSection';
-import SummaryCard from './SummaryCard';
+import CalendarView from './CalendarView';
+import DayHeader from './DayHeader';
+import NoteEditor from './NoteEditor';
+import NoteRow from './NoteRow';
 
-function greeting(h = new Date().getHours()): string {
-  if (h < 6) return 'İyi geceler';
-  if (h < 12) return 'Günaydın';
-  if (h < 18) return 'İyi günler';
-  return 'İyi akşamlar';
-}
-
-function TopBar() {
-  const c = usePalette();
-  const { date, selectDate } = useAgenda();
-  const today = todayISO();
-  const t = fromISODate(today);
-  return (
-    <View style={styles.topBar}>
-      <View>
-        <Text style={[styles.topDate, { color: c.textMuted }]}>
-          {formatWeekday(today)}, {t.getDate()} {TR_MONTHS[t.getMonth()]}
-        </Text>
-        <Text style={[styles.greet, { color: c.text }]}>{greeting()}</Text>
-      </View>
-      {date !== today && <IconButton icon="today-outline" label="Bugüne dön" onPress={() => selectDate(today)} active />}
-    </View>
-  );
-}
+type Editing = null | 'new' | string;
 
 export default function AgendaScreen() {
   const c = usePalette();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
-  const { notes } = useAgenda();
-  const [filter, setFilter] = useState<NoteFilter>('all');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const composerRef = useRef<TextInput>(null);
+  const { notes, date, selectDate } = useAgenda();
+  const [editing, setEditing] = useState<Editing>(null);
+  const [showDone, setShowDone] = useState(false);
 
-  const counts = useMemo(
-    () => ({
-      all: notes.length,
-      open: notes.filter((n) => !n.is_completed).length,
-      done: notes.filter((n) => n.is_completed).length,
-    }),
-    [notes],
-  );
-  const visible = useMemo(
-    () => notes.filter((n) => (filter === 'all' ? true : filter === 'done' ? n.is_completed : !n.is_completed)),
-    [notes, filter],
-  );
+  // Gün değişince açık düzenleyici kapanır
+  useEffect(() => setEditing(null), [date]);
 
-  const renderNote = ({ item }: { item: EntryWithDate }) => (
-    <NoteCard
-      note={item}
-      editing={editingId === item.id}
-      onEdit={() => setEditingId(item.id)}
-      onEndEdit={() => setEditingId(null)}
-    />
+  const open = useMemo(() => notes.filter((n) => !n.is_completed), [notes]);
+  const done = useMemo(() => notes.filter((n) => n.is_completed), [notes]);
+  const rows = showDone ? [...open, ...done] : open;
+
+  const renderItem = ({ item, index }: { item: EntryWithDate; index: number }) => (
+    <>
+      {showDone && index === open.length && <DoneToggle count={done.length} shown onPress={() => setShowDone(false)} />}
+      {editing === item.id ? (
+        <NoteEditor note={item} onClose={() => setEditing(null)} />
+      ) : (
+        <NoteRow note={item} onOpen={() => setEditing(item.id)} />
+      )}
+    </>
   );
 
-  const list = (header?: React.ReactElement) => (
-    <FlatList
-      data={visible}
-      keyExtractor={(n) => n.id}
-      renderItem={renderNote}
-      ListHeaderComponent={
-        <View style={styles.listHeader}>
-          {header}
-          <Composer ref={composerRef} />
-          <NotesHeader filter={filter} onFilter={setFilter} counts={counts} />
+  const header = (
+    <View>
+      {!wide && (
+        <View style={[styles.calendarBar, { borderBottomColor: c.separator }]}>
+          <CalendarView />
         </View>
-      }
-      ListEmptyComponent={
-        <EmptyNotes filtered={filter !== 'all' && notes.length > 0} onWrite={() => composerRef.current?.focus()} />
-      }
-      ItemSeparatorComponent={() => <View style={{ height: Space.sm + 2 }} />}
-      contentContainerStyle={styles.listContent}
+      )}
+      <View style={styles.pad}>
+        <DayHeader date={date} open={open.length} />
+        {editing === 'new' && <NoteEditor onClose={() => setEditing(null)} />}
+      </View>
+    </View>
+  );
+
+  const footer = (
+    <View style={styles.pad}>
+      {notes.length === 0 && editing !== 'new' && <Empty />}
+      {done.length > 0 && !showDone && <DoneToggle count={done.length} shown={false} onPress={() => setShowDone(true)} />}
+    </View>
+  );
+
+  const list = (
+    <FlatList
+      data={rows}
+      keyExtractor={(n) => n.id}
+      renderItem={renderItem}
+      ListHeaderComponent={header}
+      ListFooterComponent={footer}
+      contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
+      style={styles.flex}
+      // Satırlar içerik genişliğinde, kenarlardan içeride
+      CellRendererComponent={({ children, style, ...rest }) => (
+        <View style={[style, styles.pad]} {...rest}>
+          {children}
+        </View>
+      )}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     />
   );
 
+  const today = todayISO();
+
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: c.bg }]} edges={['top', 'left', 'right', 'bottom']}>
-      <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <SafeAreaView style={[styles.flex, { backgroundColor: wide ? c.sidebar : c.bg }]} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {wide ? (
-          <View style={styles.wide}>
-            <ScrollView style={styles.side} contentContainerStyle={styles.sideContent} showsVerticalScrollIndicator={false}>
-              <TopBar />
-              <SummaryCard />
-              <CalendarCard alwaysMonth />
-            </ScrollView>
-            <View style={styles.main}>{list()}</View>
+          <View style={[styles.flex, styles.split]}>
+            <View style={styles.sidebar}>
+              <Text style={[Type.title, styles.brand, { color: c.text }]}>Chronos</Text>
+              <CalendarView alwaysMonth />
+              {date !== today && (
+                <Pressable onPress={() => selectDate(today)} style={({ pressed }) => [styles.todayLink, pressed && { backgroundColor: c.fill }]}>
+                  <Ionicons name="star" size={16} color={c.star} />
+                  <Text style={[Type.sub, { color: c.text, fontWeight: '600' }]}>Bugüne dön</Text>
+                </Pressable>
+              )}
+            </View>
+            <View style={[styles.content, { backgroundColor: c.bg, borderLeftColor: c.separator }]}>
+              <View style={styles.contentInner}>{list}</View>
+            </View>
           </View>
         ) : (
-          <View style={styles.root}>
-            {list(
-              <>
-                <TopBar />
-                <SummaryCard />
-                <CalendarCard />
-              </>,
-            )}
-          </View>
+          <View style={[styles.flex, { backgroundColor: c.bg }]}>{list}</View>
+        )}
+
+        {editing === null && (
+          <Animated.View
+            entering={ZoomIn.duration(180)}
+            exiting={ZoomOut.duration(120)}
+            style={[styles.fabWrap, { bottom: Space.xl + insets.bottom }]}
+          >
+            <Pressable
+              onPress={() => setEditing('new')}
+              accessibilityRole="button"
+              accessibilityLabel="Yeni not"
+              style={({ pressed }) => [
+                styles.fab,
+                { backgroundColor: c.accent, shadowColor: c.accent, transform: [{ scale: pressed ? 0.94 : 1 }] },
+              ]}
+            >
+              <Ionicons name="add" size={32} color={c.onAccent} />
+            </Pressable>
+          </Animated.View>
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
+function DoneToggle({ count, shown, onPress }: { count: number; shown: boolean; onPress: () => void }) {
+  const c = usePalette();
+  return (
+    <Pressable onPress={onPress} style={styles.doneToggle} accessibilityRole="button">
+      <Text style={[Type.caption, { color: c.textMuted }]}>
+        {shown ? 'Tamamlananları gizle' : `${count} tamamlanan notu göster`}
+      </Text>
+    </Pressable>
+  );
+}
+
+function Empty() {
+  const c = usePalette();
+  return (
+    <Animated.View entering={FadeIn.duration(250)} exiting={FadeOut.duration(100)} style={styles.empty}>
+      <Ionicons name="document-text-outline" size={44} color={c.separator} />
+      <Text style={[Type.sub, { color: c.textFaint }]}>Not yok</Text>
+      <Text style={[Type.caption, { color: c.textFaint, fontWeight: '400' }]}>Eklemek için + düğmesine dokun</Text>
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Space.sm },
-  topDate: { fontFamily: Fonts.medium, fontSize: 13 },
-  greet: { fontFamily: Fonts.extrabold, fontSize: 26, letterSpacing: -0.6 },
-  listHeader: { gap: Space.lg, paddingBottom: Space.md },
-  listContent: { paddingHorizontal: Space.lg, paddingBottom: 48 },
-  wide: { flex: 1, flexDirection: 'row', paddingHorizontal: Space.md, gap: Space.md },
-  side: { width: 400, flexGrow: 0 },
-  sideContent: { gap: Space.lg, paddingHorizontal: Space.sm, paddingBottom: Space.xl },
-  main: { flex: 1, maxWidth: 760, paddingTop: Space.lg },
+  flex: { flex: 1 },
+  pad: { paddingHorizontal: Space.lg },
+  calendarBar: { borderBottomWidth: StyleSheet.hairlineWidth },
+  split: { flexDirection: 'row' },
+  sidebar: { width: 340, paddingTop: Space.lg, paddingHorizontal: Space.sm, gap: Space.sm },
+  brand: { paddingHorizontal: Space.lg, paddingBottom: Space.sm },
+  todayLink: { flexDirection: 'row', alignItems: 'center', gap: Space.sm, marginHorizontal: Space.md, padding: Space.md, borderRadius: Radius.md },
+  content: { flex: 1, borderLeftWidth: StyleSheet.hairlineWidth, alignItems: 'center' },
+  contentInner: { flex: 1, width: '100%', maxWidth: 720, paddingHorizontal: Space.xl },
+  doneToggle: { alignSelf: 'flex-start', paddingVertical: Space.md, paddingHorizontal: Space.sm },
+  empty: { alignItems: 'center', gap: 6, paddingTop: 56 },
+  fabWrap: { position: 'absolute', right: Space.xl },
+  fab: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
 });

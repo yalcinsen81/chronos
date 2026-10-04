@@ -26,3 +26,39 @@ export function parseNote(input: string): NoteDraft {
   }
   return { text: raw, time: null };
 }
+
+/** Kullanıcının saat alanına yazdığını "HH:mm"e çevirir: "9" → "09:00", "930" → "09:30", "14.5" → "14:05".
+ *  Boş girişte null, geçersiz girişte undefined döner. */
+export function normalizeTime(input: string): string | null | undefined {
+  const raw = input.trim();
+  if (!raw) return null;
+  let h: number;
+  let m = 0;
+  const sep = raw.match(/^(\d{1,2})\s*[:.\s]\s*(\d{1,2})$/);
+  if (sep) {
+    h = Number(sep[1]);
+    m = Number(sep[2]);
+  } else if (/^\d{1,4}$/.test(raw)) {
+    if (raw.length <= 2) h = Number(raw);
+    else {
+      h = Number(raw.slice(0, raw.length - 2));
+      m = Number(raw.slice(-2));
+    }
+  } else return undefined;
+  if (h > 23 || m > 59) return undefined;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/** Not metni ilk satır başlık, kalan satırlar açıklama olarak saklanır */
+export function splitNote(text: string): { title: string; body: string } {
+  const i = text.indexOf('\n');
+  if (i < 0) return { title: text.trim(), body: '' };
+  return { title: text.slice(0, i).trim(), body: text.slice(i + 1).trim() };
+}
+
+export function joinNote(title: string, body: string): string {
+  const t = title.trim();
+  const b = body.trim();
+  if (!t) return b;
+  return b ? `${t}\n${b}` : t;
+}

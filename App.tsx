@@ -1,10 +1,6 @@
 import { useMemo } from 'react';
-import { PlusJakartaSans_400Regular } from '@expo-google-fonts/plus-jakarta-sans/400Regular';
-import { PlusJakartaSans_500Medium } from '@expo-google-fonts/plus-jakarta-sans/500Medium';
-import { PlusJakartaSans_600SemiBold } from '@expo-google-fonts/plus-jakarta-sans/600SemiBold';
-import { PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans/700Bold';
-import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans/800ExtraBold';
 import { useFonts } from 'expo-font';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -14,7 +10,7 @@ import { usePalette } from './src/constants/theme';
 import { createSqliteDriver } from './src/db/sqliteDriver';
 import { AgendaProvider, useAgenda } from './src/state/AgendaContext';
 
-// Uygulama kökü: güvenli alan, yazı tipleri ve yerel veri tabanı burada kurulur.
+// Uygulama kökü: güvenli alan, ikon fontu ve yerel veri tabanı burada kurulur.
 export default function App() {
   const driver = useMemo(() => createSqliteDriver(), []);
   return (
@@ -30,13 +26,8 @@ export default function App() {
 function Root() {
   const c = usePalette();
   const { ready } = useAgenda();
-  const [fontsLoaded] = useFonts({
-    PlusJakartaSans_400Regular,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
-    PlusJakartaSans_700Bold,
-    PlusJakartaSans_800ExtraBold,
-  });
+  // İkon fontu yüklenmeden çizilirse ikonlar bir an boş kutu görünür
+  const [fontsLoaded] = useFonts(Ionicons.font);
   if (!ready || !fontsLoaded) {
     return (
       <View style={[styles.loading, { backgroundColor: c.bg }]}>

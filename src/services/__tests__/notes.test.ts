@@ -1,4 +1,4 @@
-import { parseNote } from '../notes';
+import { joinNote, normalizeTime, parseNote, splitNote } from '../notes';
 
 describe('parseNote', () => {
   it('baştaki saati ayırır', () => {
@@ -23,5 +23,29 @@ describe('parseNote', () => {
 
   it('çok satırlı notta baştaki saati ayırır, satırları korur', () => {
     expect(parseNote('14:30 Toplantı\n- bütçe\n- takvim')).toEqual({ text: 'Toplantı\n- bütçe\n- takvim', time: '14:30' });
+  });
+});
+
+describe('normalizeTime', () => {
+  it('farklı yazımları HH:mm yapar', () => {
+    expect(normalizeTime('9')).toBe('09:00');
+    expect(normalizeTime('930')).toBe('09:30');
+    expect(normalizeTime('1415')).toBe('14:15');
+    expect(normalizeTime('14.5')).toBe('14:05');
+    expect(normalizeTime('8:45')).toBe('08:45');
+  });
+  it('boşta null, geçersizde undefined', () => {
+    expect(normalizeTime('  ')).toBeNull();
+    expect(normalizeTime('25:00')).toBeUndefined();
+    expect(normalizeTime('öğlen')).toBeUndefined();
+  });
+});
+
+describe('splitNote / joinNote', () => {
+  it('ilk satır başlık, kalanı açıklama', () => {
+    expect(splitNote('Toplantı\n- bütçe\n- takvim')).toEqual({ title: 'Toplantı', body: '- bütçe\n- takvim' });
+    expect(splitNote('Süt al')).toEqual({ title: 'Süt al', body: '' });
+    expect(joinNote(' Toplantı ', ' - bütçe ')).toBe('Toplantı\n- bütçe');
+    expect(joinNote('', 'sadece açıklama')).toBe('sadece açıklama');
   });
 });
