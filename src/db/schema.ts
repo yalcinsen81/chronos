@@ -1,7 +1,7 @@
 // Local-first SQLite şeması (op-sqlite ile çalıştırılacak).
 // Kurulum: src/db/migrate.ts, sorgular: src/db/repository.ts
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const CREATE_TABLES: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS notebooks (
@@ -36,13 +36,16 @@ export const CREATE_TABLES: readonly string[] = [
     created_at INTEGER NOT NULL DEFAULT 0,
     color TEXT,
     reminder_minutes INTEGER,
-    notification_id TEXT
+    notification_id TEXT,
+    repeat TEXT,
+    series_id TEXT
   )`,
   // Günlük sayfaya tarihle hızlı erişim ve Havuz sorguları için indeksler
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_notebook_date ON pages(notebook_id, date)`,
   `CREATE INDEX IF NOT EXISTS idx_strokes_page ON strokes(page_id)`,
   `CREATE INDEX IF NOT EXISTS idx_entries_page ON entries(page_id)`,
   `CREATE INDEX IF NOT EXISTS idx_entries_inbox ON entries(is_inbox)`,
+  `CREATE INDEX IF NOT EXISTS idx_entries_series ON entries(series_id)`,
 ];
 
 /** Sürüm yükseltme adımları: anahtar, adımın getirdiği sürümdür. */
@@ -51,4 +54,10 @@ export const UPGRADES: Record<number, readonly string[]> = {
   2: ['ALTER TABLE entries ADD COLUMN color TEXT'],
   // v3: alarm (saatten kaç dakika önce; NULL = alarm yok) ve zamanlanmış bildirimin kimliği
   3: ['ALTER TABLE entries ADD COLUMN reminder_minutes INTEGER', 'ALTER TABLE entries ADD COLUMN notification_id TEXT'],
+  // v4: tekrarlayan not (repeat: daily | weekdays | weekly | monthly) ve aynı tekrar zincirindeki notları bağlayan series_id
+  4: [
+    'ALTER TABLE entries ADD COLUMN repeat TEXT',
+    'ALTER TABLE entries ADD COLUMN series_id TEXT',
+    'CREATE INDEX IF NOT EXISTS idx_entries_series ON entries(series_id)',
+  ],
 };

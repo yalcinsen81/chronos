@@ -5,24 +5,39 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } fr
 
 import { Space, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
+import type { ISODate } from '../services/calendar';
 import NoteEditor from './NoteEditor';
+
+/** Gün çizelgesinde bir saate dokunulunca açılan yeni not */
+export interface NoteDraft {
+  date: ISODate;
+  time: string | null;
+}
 
 export default function NoteSheet({
   note,
+  draft = null,
   alarm = false,
   onClose,
 }: {
   note: EntryWithDate | null;
+  draft?: NoteDraft | null;
   alarm?: boolean; // true ise kart alarm seçenekleri açık başlar
   onClose: () => void;
 }) {
   const c = usePalette();
   return (
-    <Modal visible={note !== null} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={note !== null || draft !== null} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={[styles.backdrop, { backgroundColor: c.shadow }]} onPress={onClose}>
           <Pressable style={styles.sheet} onPress={() => undefined}>
-            <View>{note && <NoteEditor key={note.id} note={note} startWithAlarm={alarm} onClose={onClose} />}</View>
+            <View>
+              {note ? (
+                <NoteEditor key={note.id} note={note} startWithAlarm={alarm} onClose={onClose} />
+              ) : (
+                draft && <NoteEditor key="new" newDate={draft.date} initialTime={draft.time} onClose={onClose} />
+              )}
+            </View>
           </Pressable>
         </Pressable>
       </KeyboardAvoidingView>

@@ -6,9 +6,9 @@ dokun, yaz, Enter'a bas; not o güne eklenir. Tasarım, GitHub'daki
 [WeekToDo](https://github.com/manuelernestog/weektodo)'dan esinlenir (kodu kopyalanmadı, yalnızca düzen örnek alındı).
 Renkler sıcak bir kağıt havasında: fildişi zemin, kil rengi vurgu, tırnaklı başlıklar.
 
-| Hafta (bilgisayar/tablet) | Telefon | Alarm kurma | Yaklaşan alarmlar | Koyu tema |
-|---|---|---|---|---|
-| ![](docs/screenshots/hafta.png) | ![](docs/screenshots/telefon.png) | ![](docs/screenshots/not-detay.png) | ![](docs/screenshots/alarmlar.png) | ![](docs/screenshots/koyu.png) |
+| Hafta | Gün (saat çizelgesi) | Telefon, gün | Tekrar ve taşı | Alarmlar | Koyu tema |
+|---|---|---|---|---|---|
+| ![](docs/screenshots/hafta.png) | ![](docs/screenshots/gun.png) | ![](docs/screenshots/telefon-gun.png) | ![](docs/screenshots/tekrar.png) | ![](docs/screenshots/alarmlar.png) | ![](docs/screenshots/koyu.png) |
 
 ## Telefonda denemek (en kolay yol)
 
@@ -24,16 +24,24 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
 
 ## Kullanım
 
-- **Geniş ekranda** hafta yan yana sütunlar halinde görünür; yana kaydırarak tüm günleri gezersin.
-  **Telefonda** bir gün tam ekran görünür, yana kaydırınca sonraki güne geçer; üstteki gün şeridine dokunarak da atlayabilirsin.
-- Bir günün **"+ Not ekle"** satırına (ya da altındaki boş çizgilere) dokun, yaz, Enter'a bas. Satır yeniden
-  odaklanır, peş peşe not yazabilirsin. Başına saat yazarsan (`09:00 Toplantı`, `930 Spor`) saat ayrıca gösterilir.
-- Kutucuk notu tamamlar (üstü çizilir). Nota dokununca ayrıntı kartı açılır: açıklama, saat, renk etiketi, alarm, silme.
-- Üstteki **‹ ›** oklar haftayı değiştirir, **Bugün** bu haftaya döner. Ay adına dokununca ay takvimi açılır.
+- **Hafta görünümü:** geniş ekranda günler yan yana sütunlar; telefonda bir gün tam ekran, yana kaydırınca sonraki gün,
+  üstteki gün şeridine dokunarak da atlanır. Bir günün **"+ Not ekle"** satırına (ya da boş çizgilere) dokun, yaz, Enter'a bas;
+  satır açık kalır, peş peşe not yazabilirsin. Başa saat yazarsan (`09:00 Toplantı`, `930 Spor`) saat ayrıca görünür.
+- **Gün görünümü:** gün adına (ya da yanındaki ⤢ simgesine) dokununca o gün saat çizelgesiyle açılır. Saatli notlar saatinde
+  bloklar halinde durur (üst üste binenler yan yana), saatsizler "Gün boyu" bölümündedir, bugünde şimdiki zaman çizgisi
+  görünür. Boş bir saate dokunursan o saatte yeni not açılır. Sola/sağa kaydırınca ya da ‹ › oklarıyla gün değişir;
+  "‹ Hafta" haftaya döner.
+- Kutucuk notu tamamlar. Nota dokununca ayrıntı kartı açılır: açıklama, saat, renk etiketi, alarm, tekrar, taşı, sil.
+- **Tekrar:** kartta 🔁 çipinden *her gün, hafta içi, her hafta, her ay* seç. Tekrarlar gerçek notlardır (her birini ayrı
+  tamamlarsın) ve en az 30 gün ilerisine kadar otomatik oluşturulur. Tekrarı "Tekrar yok" yaparsan o günden sonraki
+  tamamlanmamış tekrarlar silinir.
+- **Taşı:** kartta *Bugüne / Yarına / +1 hafta*. Geçmiş bir günde bitmemiş not varsa sütun başlığındaki
+  "N açık · bugüne taşı" düğmesi hepsini tek dokunuşla bugüne aktarır.
 - **Alarm:** saati olan her notun sağında ⏰ zil vardır; dokununca alarm seçenekleri açılır (tam saatinde, 5/15/30 dk,
-  1 saat veya 1 gün önce). Kurulu alarmın zili renklenir. Üst çubuktaki zil, sayısıyla birlikte yaklaşan tüm alarmları
-  listeler; birine dokununca o gün ve not açılır. Saatsiz nota alarm için önce kartta saat gir. İlk seferde bildirim izni sorulur. Saati gelince telefon sesli bildirim gösterir;
-  not tamamlanır veya silinirse alarm iptal olur. Tarayıcı önizlemesinde alarm çalmaz.
+  1 saat veya 1 gün önce). Üst çubuktaki zil, sayısıyla birlikte yaklaşan tüm alarmları listeler. İlk seferde bildirim izni
+  sorulur. Bildirimde **"10 dk ertele"** ve **"Tamamla"** düğmeleri çıkar (düğmeye basınca uygulama açılır ve işlemi yapar);
+  bildirime dokunmak o günün görünümünü açar. Tekrarlayan notların alarmları yalnızca 21 gün öncesinden kurulur
+  (iOS en çok 64 bekleyen bildirim tutar); uygulamayı en az üç haftada bir açman yeterli. Tarayıcı önizlemesinde alarm çalmaz.
 - Telefonun açık/koyu temasına otomatik uyar.
 
 ## Tarayıcı önizlemesi

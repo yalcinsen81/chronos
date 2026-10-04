@@ -14,6 +14,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import Animated, { FadeIn, FadeInLeft, FadeInRight, ZoomIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Space, usePalette, WIDE_BREAKPOINT } from '../constants/theme';
@@ -21,16 +22,25 @@ import type { EntryWithDate } from '../db/repository';
 import type { ISODate } from '../services/calendar';
 import { useAgenda } from '../state/AgendaContext';
 import DayColumn from './DayColumn';
-import NoteSheet from './NoteSheet';
+import DayView from './DayView';
+import NoteSheet, { type NoteDraft } from './NoteSheet';
 import WeekHeader from './WeekHeader';
 
 export default function AgendaScreen() {
   const c = usePalette();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
-  const { date, weekDays, weekNotes, selectDate } = useAgenda();
+  const { date, weekStart, weekDays, weekNotes, selectDate, view } = useAgenda();
   const [openNote, setOpenNote] = useState<EntryWithDate | null>(null);
   const [alarmFirst, setAlarmFirst] = useState(false);
+  const [draft, setDraft] = useState<NoteDraft | null>(null);
+
+  // Hafta değişince sütunlar değişim yönüne doğru kayarak gelir
+  const prevWeek = useRef(weekStart);
+  const dir = weekStart > prevWeek.current ? 1 : weekStart < prevWeek.current ? -1 : 0;
+  useEffect(() => {
+    prevWeek.current = weekStart;
+  }, [weekStart]);
   const open = (n: EntryWithDate, alarm = false) => {
     setAlarmFirst(alarm);
     setOpenNote(n);
@@ -46,14 +56,52 @@ export default function AgendaScreen() {
   return (
     <SafeAreaView style={[styles.flex, { backgroundColor: c.bg }]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <WeekHeader showStrip={!wide} onOpenNote={open} />
-        {wide ? (
-          <WideWeek width={width} days={weekDays} notes={weekNotes} focus={date} onOpen={open} />
+        <WeekHeader showStrip={!wide || view === 'day'} onOpenNote={open} />
+        {view === 'day' ? (
+          // Hafta → gün: gün görünümü hafifçe büyüyerek belirir
+          <Animated.View key="day" entering={FadeIn.duration(240)} style={styles.flex}>
+            <Animated.View
+              entering={ZoomIn.withInitialValues({ transform: [{ scale: 0.95 }] }).duration(260)}
+              style={styles.flex}
+            >
+              <DayView
+                date={date}
+                notes={weekNotes[date] ?? []}
+                onOpen={open}
+                onNew={(d, t) => setDraft({ date: d, time: t })}
+              />
+            </Animated.View>
+          </Animated.View>
         ) : (
-          <PhoneWeek width={width} days={weekDays} notes={weekNotes} focus={date} onFocus={selectDate} onOpen={open} />
+          <Animated.View
+            key={`week-${weekStart}`}
+            entering={(dir > 0 ? FadeInRight : dir < 0 ? FadeInLeft : FadeIn).duration(240)}
+            style={styles.flex}
+          >
+            {wide ? (
+              <WideWeek width={width} days={weekDays} notes={weekNotes} focus={date} onOpen={open} />
+            ) : (
+              <PhoneWeek
+                width={width}
+                days={weekDays}
+                notes={weekNotes}
+                focus={date}
+                onFocus={selectDate}
+                onOpen={open}
+              />
+            )}
+          </Animated.View>
         )}
       </KeyboardAvoidingView>
-      <NoteSheet note={current} alarm={alarmFirst} onClose={() => setOpenNote(null)} />
+      <NoteSheet
+        note={current}
+        draft={draft}
+        alarm={alarmFirst}
+        onClose={() => {
+          setOpenNote(null);
+          setDraft(null);
+        }}
+      />
     </SafeAreaView>
   );
 }

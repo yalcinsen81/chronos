@@ -3,9 +3,9 @@
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { Radius, Space, Type, usePalette } from '../constants/theme';
+import { Radius, Space, Type, usePalette, WIDE_BREAKPOINT } from '../constants/theme';
 import { addDays, fromISODate, isoWeekNumber, todayISO, TR_MONTHS, TR_WEEKDAYS_SHORT } from '../services/calendar';
 import { useAgenda } from '../state/AgendaContext';
 import type { EntryWithDate } from '../db/repository';
@@ -20,7 +20,10 @@ export default function WeekHeader({
   onOpenNote: (n: EntryWithDate) => void;
 }) {
   const c = usePalette();
-  const { date, weekStart, weekDays, weekNotes, selectDate } = useAgenda();
+  const { date, weekStart, weekDays, weekNotes, selectDate, view, showWeek } = useAgenda();
+  const { width } = useWindowDimensions();
+  const day = view === 'day';
+  const step = day ? 1 : 7;
   const [pickerOpen, setPickerOpen] = useState(false);
   const today = todayISO();
   const s = fromISODate(weekStart);
@@ -33,25 +36,43 @@ export default function WeekHeader({
   return (
     <View style={[styles.wrap, { borderBottomColor: c.separator }]}>
       <View style={styles.bar}>
-        <Pressable
-          onPress={() => setPickerOpen(true)}
-          style={styles.titleBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Takvimi aç"
-        >
-          <View style={styles.titleCol}>
-            <View style={styles.titleRow}>
-              <Text numberOfLines={1} style={[Type.title, { color: c.text, flexShrink: 1 }]}>
-                {title}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color={c.accent} />
+        {day && (
+          <Pressable
+            onPress={showWeek}
+            accessibilityRole="button"
+            accessibilityLabel="Haftaya dön"
+            style={({ pressed }) => [styles.back, { backgroundColor: c.accentSoft }, pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons name="chevron-back" size={16} color={c.accent} />
+            <Text style={[Type.caption, { color: c.accent }]}>Hafta</Text>
+          </Pressable>
+        )}
+        {(!day || width >= WIDE_BREAKPOINT) && (
+          <Pressable
+            onPress={() => setPickerOpen(true)}
+            style={styles.titleBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Takvimi aç"
+          >
+            <View style={styles.titleCol}>
+              <View style={styles.titleRow}>
+                <Text numberOfLines={1} style={[Type.title, { color: c.text, flexShrink: 1 }]}>
+                  {title}
+                </Text>
+                <Ionicons name="chevron-down" size={16} color={c.accent} />
+              </View>
+              <Text style={[Type.caption, { color: c.textMuted }]}>{isoWeekNumber(weekStart)}. hafta</Text>
             </View>
-            <Text style={[Type.caption, { color: c.textMuted }]}>{isoWeekNumber(weekStart)}. hafta</Text>
-          </View>
-        </Pressable>
+          </Pressable>
+        )}
+        {day && width < WIDE_BREAKPOINT && <View style={styles.spacer} />}
         <View style={styles.actions}>
           <AlarmButton onOpenNote={onOpenNote} />
-          <IconBtn icon="chevron-back" label="Önceki hafta" onPress={() => selectDate(addDays(date, -7))} />
+          <IconBtn
+            icon="chevron-back"
+            label={day ? 'Önceki gün' : 'Önceki hafta'}
+            onPress={() => selectDate(addDays(date, -step))}
+          />
           <Pressable
             onPress={() => selectDate(today)}
             accessibilityRole="button"
@@ -63,7 +84,11 @@ export default function WeekHeader({
           >
             <Text style={[Type.caption, { color: c.text }]}>Bugün</Text>
           </Pressable>
-          <IconBtn icon="chevron-forward" label="Sonraki hafta" onPress={() => selectDate(addDays(date, 7))} />
+          <IconBtn
+            icon="chevron-forward"
+            label={day ? 'Sonraki gün' : 'Sonraki hafta'}
+            onPress={() => selectDate(addDays(date, step))}
+          />
         </View>
       </View>
 
@@ -152,6 +177,16 @@ const styles = StyleSheet.create({
     paddingVertical: Space.sm,
     gap: Space.sm,
   },
+  back: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    height: 32,
+    paddingLeft: 6,
+    paddingRight: Space.md,
+    borderRadius: Radius.pill,
+  },
+  spacer: { flex: 1 },
   titleBtn: { flexShrink: 1, marginRight: Space.sm },
   titleCol: { flexShrink: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },

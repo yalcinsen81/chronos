@@ -53,8 +53,7 @@ export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMo
     repo.countEntriesByDate(notebookId, from, to).then(setCounts);
   }, [repo, notebookId, from, to, revision]);
 
-  const step = (dir: 1 | -1) =>
-    setAnchor(showMonth ? startOfMonth(addMonths(anchor, dir)) : addDays(anchor, 7 * dir));
+  const step = (dir: 1 | -1) => setAnchor(showMonth ? startOfMonth(addMonths(anchor, dir)) : addDays(anchor, 7 * dir));
   // Hafta şeridinde başlık, haftanın perşembesinin ayını gösterir (ay geçişlerinde doğru ay)
   const titleDate = showMonth ? a : fromISODate(addDays(startOfWeek(anchor), 3));
 
@@ -69,7 +68,8 @@ export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMo
           accessibilityLabel={expanded ? 'Haftalık görünüm' : 'Aylık görünüm'}
         >
           <Text style={[Type.bodyBold, { color: c.text }]}>
-            {TR_MONTHS[titleDate.getMonth()]} <Text style={{ color: c.textMuted, fontWeight: '400' }}>{titleDate.getFullYear()}</Text>
+            {TR_MONTHS[titleDate.getMonth()]}{' '}
+            <Text style={{ color: c.textMuted, fontWeight: '400' }}>{titleDate.getFullYear()}</Text>
           </Text>
           {!alwaysMonth && <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={c.accent} />}
         </Pressable>
@@ -128,7 +128,15 @@ export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMo
   );
 }
 
-function Arrow({ icon, label, onPress }: { icon: 'chevron-back' | 'chevron-forward'; label: string; onPress: () => void }) {
+function Arrow({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: 'chevron-back' | 'chevron-forward';
+  label: string;
+  onPress: () => void;
+}) {
   const c = usePalette();
   return (
     <Pressable
@@ -145,7 +153,13 @@ function Arrow({ icon, label, onPress }: { icon: 'chevron-back' | 'chevron-forwa
 
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: Space.md, paddingBottom: Space.sm },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Space.xs, height: 44 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Space.xs,
+    height: 44,
+  },
   titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: Space.sm },
   arrows: { flexDirection: 'row' },
   arrow: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },

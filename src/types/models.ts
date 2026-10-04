@@ -43,4 +43,6 @@ export interface Entry {
   color: string | null; // renk etiketi anahtarı (theme.ts → NoteTags)
   reminder_minutes: number | null; // alarm: saatten kaç dk önce (0 = tam saatinde); null = alarm yok
   notification_id: string | null; // zamanlanmış yerel bildirimin kimliği
+  repeat: string | null; // tekrar kuralı (services/recurrence.ts → RepeatRule); null = tekrar yok
+  series_id: string | null; // aynı tekrar zincirindeki notların ortak kimliği (ilk notun id'si)
 }

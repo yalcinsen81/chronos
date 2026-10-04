@@ -30,12 +30,15 @@ index.web.ts            Web girişi: sql.js yüklendikten sonra App'i kaydeder
 src/
   components/           AgendaScreen (geniş: yan yana sütunlar, telefon: sayfa sayfa günler),
                         WeekHeader (ay/hafta, oklar, Bugün, gün şeridi, ay takvimi penceresi),
-                        DayColumn (gün sütunu: çizgili satırlar + hızlı ekleme satırı),
+                        DayColumn (gün sütunu: çizgili satırlar + hızlı ekleme satırı, TaskLine),
+                        DayView (gün görünümü: saat çizelgesi, Gün boyu, şimdi çizgisi, kaydırarak gün değiştirme),
+                        Bell (alarm zili sallanma animasyonu),
                         NoteSheet + NoteEditor (not ayrıntı kartı: açıklama, saat, renk, alarm),
                         AlarmList (üst çubuktaki zil + yaklaşan alarmlar), CalendarView (ay takvimi), Checkbox
   constants/theme.ts    Açık/koyu palet, not renk etiketleri, yazı tipleri, ölçüler, usePalette()
-  state/AgendaContext   Seçili gün, haftanın 7 günü ve notları (weekNotes), ekle/düzenle/tamamla/sil
-  services/             calendar.ts (tarih yardımcıları), notes.ts (saat ayıklama/normalleştirme,
+  state/AgendaContext   Seçili gün, hafta/gün görünümü (view), haftanın notları (weekNotes), ekle/düzenle/tamamla/sil/taşı
+  services/             calendar.ts (tarih yardımcıları), recurrence.ts (tekrar kuralları), series.ts (tekrarları üretir),
+                        dayLayout.ts (saat çizelgesi yerleşimi), notes.ts (saat ayıklama/normalleştirme,
                         başlık+açıklama: ilk satır başlık), reminderTime.ts (alarm anı, saf),
                         reminders.ts (bildirim kurma/iptal), haptics.ts
   db/                   schema.ts, migrate.ts, repository.ts, sürücüler
@@ -55,6 +58,15 @@ src/
 9. **Alarm tutarlılığı:** Notu değiştiren her işlem AgendaContext üzerinden geçer; `syncReminder` bildirimi
    veri tabanının son haline göre yeniden kurar ve `notification_id`'yi saklar. Açılışta tüm alarmlar yeniden kurulur.
    Bu, gerçek bir "çalar saat" değil, sesli ve yüksek öncelikli bildirimdir.
+
+10. **Tekrarlayan notlar gerçek notlardır.** `entries.repeat` (kural) ve `series_id` (zincir) ile bağlanır; zincirin en geç tarihli
+    üyesi şablondur (`repo.listSeriesTails`). `materializeSeries` eksik tekrarları üretir ve AgendaContext'in yükleme efektinde
+    sıraya girerek çağrılır (çift üretimi önler). Tekrarı değiştirmek/durdurmak `repo.changeSeries` ile yapılır (gelecekteki
+    tamamlanmamış tekrarları siler). Tekrarların alarmı yalnızca 21 gün önceden kurulur (`reminders.ts`, iOS 64 bildirim sınırı).
+11. **Bildirim düğmeleri** (`alarm` kategorisi: ertele/tamamla) uygulamayı öne açar; yanıtlar `listenAlarmActions` ile AgendaContext'te
+    işlenir. Ertelenmiş bildirimin kimliği `snooze-<notId>`'dir; not tamamlanınca/silinince iptal edilir.
+12. **Animasyonlar sakin kalır:** yalnızca hazır reanimated giriş animasyonları (FadeIn/ZoomIn), çıkış (exiting) animasyonu yok;
+    web'de özel worklet animasyon kullanılmaz.
 
 ## Komutlar
 

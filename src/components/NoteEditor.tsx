@@ -12,30 +12,47 @@ import { NOTE_TAG_KEYS, NoteTags, Radius, Space, tagColor, Type, usePalette } fr
 import type { EntryWithDate } from '../db/repository';
 import { joinNote, normalizeTime, parseNote, splitNote } from '../services/notes';
 import { remindersSupported, requestReminderPermission } from '../services/reminders';
+import { addDays, todayISO, type ISODate } from '../services/calendar';
 import { REMINDER_OPTIONS, reminderLabel } from '../services/reminderTime';
+import { REPEAT_OPTIONS, repeatLabel } from '../services/recurrence';
 import { useAgenda } from '../state/AgendaContext';
 import Checkbox from './Checkbox';
 import { webNoOutline } from './webStyles';
 
+/** "Taşı" düğmeleri: notun bulunduğu güne göre değil, bugüne ve notun gününe göre hedefler */
+const MOVE_TARGETS: { label: string; target: (from: ISODate) => ISODate }[] = [
+  { label: 'Bugüne', target: () => todayISO() },
+  { label: 'Yarına', target: (from) => addDays(from > todayISO() ? from : todayISO(), 1) },
+  { label: '+1 hafta', target: (from) => addDays(from, 7) },
+];
+
 export default function NoteEditor({
   note,
   startWithAlarm = false,
+  newDate,
+  initialTime,
   onClose,
 }: {
   note?: EntryWithDate;
   startWithAlarm?: boolean;
+  /** Yeni notun günü (note yokken) */
+  newDate?: ISODate;
+  /** Yeni notun başlangıç saati (gün çizelgesinde bir saate dokunulduysa) */
+  initialTime?: string | null;
   onClose: () => void;
 }) {
   const c = usePalette();
-  const { saveNote, deleteNote, toggleNote } = useAgenda();
+  const { saveNote, deleteNote, toggleNote, moveNote } = useAgenda();
   const initial = note ? splitNote(note.text_content) : { title: '', body: '' };
   const [title, setTitle] = useState(initial.title);
   const [body, setBody] = useState(initial.body);
-  const [time, setTime] = useState(note?.time_slot ?? '');
+  const [time, setTime] = useState(note?.time_slot ?? initialTime ?? '');
   const [color, setColor] = useState<string | null>(note?.color ?? null);
   const [timeError, setTimeError] = useState(false);
   const [reminder, setReminder] = useState<number | null>(note?.reminder_minutes ?? null);
   const [alarmOpen, setAlarmOpen] = useState(startWithAlarm);
+  const [repeat, setRepeat] = useState<string | null>(note?.repeat ?? null);
+  const [repeatOpen, setRepeatOpen] = useState(false);
   const [alarmHint, setAlarmHint] = useState<string | null>(null);
   const bodyRef = useRef<TextInput>(null);
   const isNew = !note;
@@ -62,7 +79,15 @@ export default function NoteEditor({
       setAlarmHint('Alarm için saat gir');
       return;
     }
-    await saveNote({ id: note?.id, text: joinNote(ttl, body), time: t, color, reminder });
+    await saveNote({
+      id: note?.id,
+      date: note ? undefined : newDate,
+      text: joinNote(ttl, body),
+      time: t,
+      color,
+      reminder,
+      repeat,
+    });
     onClose();
   };
 
@@ -161,7 +186,10 @@ export default function NoteEditor({
           </View>
 
           <Pressable
-            onPress={() => setAlarmOpen((v) => !v)}
+            onPress={() => {
+              setRepeatOpen(false);
+              setAlarmOpen((v) => !v);
+            }}
             accessibilityRole="button"
             accessibilityLabel={`Alarm: ${reminderLabel(reminder)}`}
             style={[
@@ -177,6 +205,19 @@ export default function NoteEditor({
             <Text style={[Type.caption, { color: reminder != null ? c.accent : c.textMuted }]}>
               {reminderLabel(reminder, true)}
             </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              setAlarmOpen(false);
+              setRepeatOpen((v) => !v);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Tekrar: ${repeatLabel(repeat)}`}
+            style={[styles.timeChip, { backgroundColor: repeat ? c.accentSoft : c.fill, borderColor: 'transparent' }]}
+          >
+            <Ionicons name="repeat" size={16} color={repeat ? c.accent : c.textMuted} />
+            <Text style={[Type.caption, { color: repeat ? c.accent : c.textMuted }]}>{repeatLabel(repeat, true)}</Text>
           </Pressable>
         </View>
 
@@ -218,6 +259,56 @@ export default function NoteEditor({
             );
           })}
         </Animated.View>
+      )}
+      {repeatOpen && (
+        <Animated.View entering={FadeInDown.duration(160)} style={styles.alarmOptions}>
+          {[{ rule: null as string | null, label: 'Tekrar yok' }, ...REPEAT_OPTIONS].map((o) => {
+            const active = o.rule === repeat;
+            return (
+              <Pressable
+                key={String(o.rule)}
+                onPress={() => {
+                  setRepeat(o.rule);
+                  setRepeatOpen(false);
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                style={[styles.option, { backgroundColor: active ? c.accent : c.fill }]}
+              >
+                <Text style={[Type.caption, { color: active ? c.onAccent : c.text }]}>{o.label}</Text>
+              </Pressable>
+            );
+          })}
+          {note?.series_id && repeat !== (note?.repeat ?? null) && (
+            <Text style={[Type.caption, styles.hintInline, { color: c.textMuted }]}>
+              Bu günden sonraki tekrarlar yeni kurala göre yenilenir.
+            </Text>
+          )}
+        </Animated.View>
+      )}
+      {note?.date && (
+        <View style={styles.moveRow}>
+          <Ionicons name="arrow-redo-outline" size={15} color={c.textMuted} />
+          <Text style={[Type.caption, { color: c.textMuted }]}>Taşı</Text>
+          {MOVE_TARGETS.map((m) => {
+            const target = m.target(note.date as ISODate);
+            if (target === note.date) return null;
+            return (
+              <Pressable
+                key={m.label}
+                onPress={() => {
+                  moveNote(note.id, target);
+                  onClose();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${m.label} taşı`}
+                style={[styles.option, { backgroundColor: c.fill }]}
+              >
+                <Text style={[Type.caption, { color: c.text }]}>{m.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
       )}
       {alarmHint && (
         <Text style={[Type.caption, styles.hint, { color: alarmHint.startsWith('Tarayıcı') ? c.textMuted : c.danger }]}>
@@ -309,6 +400,15 @@ const styles = StyleSheet.create({
     paddingBottom: Space.md,
   },
   option: { paddingHorizontal: Space.md, height: 32, borderRadius: Radius.pill, justifyContent: 'center' },
+  hintInline: { alignSelf: 'center', fontWeight: '400' },
+  moveRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Space.sm,
+    paddingHorizontal: Space.lg,
+    paddingBottom: Space.md,
+  },
   hint: { paddingHorizontal: Space.lg, paddingBottom: Space.md, fontWeight: '400' },
   timeInput: { width: 52, paddingVertical: 0, fontVariant: ['tabular-nums'] },
   tags: { flexDirection: 'row', alignItems: 'center', gap: 2 },

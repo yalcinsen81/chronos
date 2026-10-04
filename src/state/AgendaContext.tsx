@@ -8,7 +8,14 @@ import { migrate } from '../db/migrate';
 import { createRepository, type EntryWithDate, type Repository } from '../db/repository';
 import { addDays, startOfWeek, todayISO, type ISODate } from '../services/calendar';
 import { haptics } from '../services/haptics';
-import { cancelReminder, scheduleReminder } from '../services/reminders';
+import {
+  cancelReminder,
+  cancelSnooze,
+  listenAlarmActions,
+  scheduleReminder,
+  snoozeReminder,
+} from '../services/reminders';
+import { materializeSeries } from '../services/series';
 
 export interface NoteInput {
   /** Verilmezse yeni not oluşturulur */
@@ -21,7 +28,14 @@ export interface NoteInput {
   color: string | null;
   /** Saatten kaç dakika önce alarm; null = alarm yok */
   reminder: number | null;
+  /** Tekrar kuralı (services/recurrence.ts); null = tekrar yok; verilmezse mevcut notun tekrarı değişmez */
+  repeat?: string | null;
 }
+
+export type AgendaView = 'week' | 'day';
+
+/** Tekrarlayan notlar en az bu kadar gün ilerisine kadar üretilir (gezilen hafta daha ilerideyse o haftaya kadar) */
+const SERIES_HORIZON_DAYS = 30;
 
 interface AgendaState {
   ready: boolean;
@@ -37,7 +51,16 @@ interface AgendaState {
   weekNotes: Record<ISODate, EntryWithDate[]>;
   /** Herhangi bir not değiştiğinde artar; takvim noktaları buna göre yenilenir */
   revision: number;
+  /** Haftalık ya da günlük görünüm */
+  view: AgendaView;
   selectDate: (date: ISODate) => void;
+  /** Günü seçip gün görünümüne geçer */
+  showDay: (date: ISODate) => void;
+  showWeek: () => void;
+  /** Notu başka güne taşır (alarmı yeni güne göre yeniden kurulur) */
+  moveNote: (id: string, date: ISODate) => Promise<void>;
+  /** O günün tamamlanmamış notlarını bugüne aktarır */
+  carryOver: (date: ISODate) => Promise<void>;
   saveNote: (input: NoteInput) => Promise<void>;
   toggleNote: (id: string) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
@@ -54,6 +77,8 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   const weekStart = startOfWeek(date);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const [revision, setRevision] = useState(0);
+  const [view, setView] = useState<AgendaView>('week');
+  const seriesLock = useRef<Promise<void>>(Promise.resolve());
   const dateRef = useRef(date);
   dateRef.current = date;
 
@@ -91,16 +116,27 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   useEffect(() => {
     if (!notebookId) return;
     let cancelled = false;
-    repo.listEntriesBetween(notebookId, weekDays[0], weekDays[6]).then((list) => {
+    (async () => {
+      // Tekrarlayan notların eksik tekrarları üretilir (görünen haftaya ya da 30 gün ileriye kadar)
+      const horizon = addDays(todayISO(), SERIES_HORIZON_DAYS);
+      const until = weekDays[6] > horizon ? weekDays[6] : horizon;
+      // Üst üste gelen yüklemeler aynı tekrarı iki kez üretmesin diye sıraya girer
+      const run = seriesLock.current.then(() => materializeSeries(repo, notebookId, until));
+      seriesLock.current = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      for (const id of await run) await syncReminder(id);
+      const list = await repo.listEntriesBetween(notebookId, weekDays[0], weekDays[6]);
       if (cancelled) return;
       const byDay: Record<ISODate, EntryWithDate[]> = {};
       for (const e of list) (byDay[e.date as ISODate] ??= []).push(e);
       setWeekNotes(byDay);
-    });
+    })().catch((e) => console.error('Notlar yüklenemedi', e));
     return () => {
       cancelled = true;
     };
-  }, [repo, notebookId, weekDays, revision]);
+  }, [repo, notebookId, weekDays, revision, syncReminder]);
 
   const bump = useCallback(() => setRevision((r) => r + 1), []);
 
@@ -109,6 +145,15 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     haptics.select();
     setDate(next);
   }, []);
+
+  const showDay = useCallback(
+    (next: ISODate) => {
+      selectDate(next);
+      setView('day');
+    },
+    [selectDate],
+  );
+  const showWeek = useCallback(() => setView('week'), []);
 
   const saveNote = useCallback(
     async (input: NoteInput) => {
@@ -121,6 +166,7 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
           time: input.time,
           color: input.color,
           reminderMinutes: input.reminder,
+          repeat: input.repeat ?? null,
           date: input.date ?? dateRef.current,
         });
         id = e.id;
@@ -129,6 +175,13 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
         await repo.updateEntry(id, text, input.time);
         await repo.setEntryColor(id, input.color);
         await repo.setEntryReminder(id, input.reminder);
+        if (input.repeat !== undefined) {
+          const before = await repo.getEntry(id);
+          if (before && before.repeat !== input.repeat) {
+            // Sonraki tekrarlar silinir; yeni kurala göre yeniden üretilir (load efekti)
+            for (const nid of await repo.changeSeries(id, input.repeat)) await cancelReminder(nid);
+          }
+        }
       }
       await syncReminder(id);
       bump();
@@ -150,12 +203,60 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     async (id: string) => {
       const entry = await repo.getEntry(id);
       await cancelReminder(entry?.notification_id ?? null);
+      await cancelSnooze(id);
       await repo.deleteEntry(id);
       haptics.tap();
       bump();
     },
     [repo, bump],
   );
+
+  const moveNote = useCallback(
+    async (id: string, target: ISODate) => {
+      if (!notebookId) return;
+      await repo.moveEntryToDate(notebookId, id, target);
+      haptics.tap();
+      await syncReminder(id);
+      bump();
+    },
+    [repo, notebookId, bump, syncReminder],
+  );
+
+  const carryOver = useCallback(
+    async (from: ISODate) => {
+      if (!notebookId) return;
+      const today = todayISO();
+      for (const n of await repo.listEntriesForDate(notebookId, from)) {
+        if (n.is_completed) continue;
+        await repo.moveEntryToDate(notebookId, n.id, today);
+        await syncReminder(n.id);
+      }
+      haptics.tap();
+      bump();
+    },
+    [repo, notebookId, bump, syncReminder],
+  );
+
+  // Bildirime dokunma ve bildirimdeki "ertele" / "tamamla" düğmeleri
+  useEffect(() => {
+    if (!ready) return;
+    return listenAlarmActions(async (a) => {
+      const entry = await repo.getEntry(a.entryId);
+      if (!entry) return;
+      if (a.action === 'snooze') {
+        await snoozeReminder(entry);
+      } else if (a.action === 'done') {
+        if (!entry.is_completed) {
+          await repo.toggleEntry(entry.id);
+          await syncReminder(entry.id);
+          bump();
+        }
+      } else if (entry.date) {
+        setDate(entry.date);
+        setView('day');
+      }
+    });
+  }, [ready, repo, bump, syncReminder]);
 
   const value: AgendaState = {
     ready,
@@ -166,7 +267,12 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     weekDays,
     weekNotes,
     revision,
+    view,
     selectDate,
+    showDay,
+    showWeek,
+    moveNote,
+    carryOver,
     saveNote,
     toggleNote,
     deleteNote,

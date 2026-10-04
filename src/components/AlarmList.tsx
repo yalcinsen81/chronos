@@ -4,6 +4,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
@@ -95,7 +96,7 @@ export default function AlarmButton({ onOpenNote }: { onOpenNote: (n: EntryWithD
                   const { title, body } = splitNote(a.text_content);
                   const showDay = i === 0 || alarms[i - 1].date !== a.date;
                   return (
-                    <View key={a.id}>
+                    <Animated.View key={a.id} entering={FadeInDown.duration(200).delay(Math.min(i, 8) * 40)}>
                       {showDay && (
                         <Text style={[Type.micro, styles.day, { color: c.textMuted }]}>
                           {dayLabel(a.date).toUpperCase()}
@@ -121,7 +122,7 @@ export default function AlarmButton({ onOpenNote }: { onOpenNote: (n: EntryWithD
                           </Text>
                         </View>
                       </Pressable>
-                    </View>
+                    </Animated.View>
                   );
                 })}
               </ScrollView>

@@ -10,6 +10,10 @@ import { splitNote } from './notes';
 import { reminderFireDate, reminderLabel, shouldSchedule } from './reminderTime';
 
 const CHANNEL_ID = 'alarms';
+const CATEGORY_ID = 'alarm';
+const SNOOZE_MINUTES = 10;
+/** Tekrarlayan notların alarmı yalnızca bu kadar gün öncesinden kurulur (iOS en fazla 64 bekleyen bildirim tutar) */
+const SERIES_WINDOW_DAYS = 21;
 let ready = false;
 
 async function setup() {
@@ -24,6 +28,11 @@ async function setup() {
       shouldSetBadge: false,
     }),
   });
+  // Bildirimdeki düğmeler: ertele ve tamamla (uygulama açılır, işlem listenAlarmActions ile yapılır)
+  await Notifications.setNotificationCategoryAsync(CATEGORY_ID, [
+    { identifier: 'snooze', buttonTitle: `${SNOOZE_MINUTES} dk ertele`, options: { opensAppToForeground: true } },
+    { identifier: 'done', buttonTitle: 'Tamamla', options: { opensAppToForeground: true } },
+  ]).catch(() => undefined);
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'Alarmlar',
@@ -44,7 +53,9 @@ export async function requestReminderPermission(): Promise<boolean> {
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   if (!current.canAskAgain) return false;
-  const res = await Notifications.requestPermissionsAsync({ ios: { allowAlert: true, allowSound: true, allowBadge: false } });
+  const res = await Notifications.requestPermissionsAsync({
+    ios: { allowAlert: true, allowSound: true, allowBadge: false },
+  });
   return res.granted;
 }
 
@@ -53,25 +64,88 @@ export async function cancelReminder(notificationId: string | null) {
   await Notifications.cancelScheduledNotificationAsync(notificationId).catch(() => undefined);
 }
 
+const snoozeId = (entryId: string) => `snooze-${entryId}`;
+
+/** Ertelenmiş bildirimi iptal eder (not tamamlanınca ya da silinince) */
+export async function cancelSnooze(entryId: string) {
+  await Notifications.cancelScheduledNotificationAsync(snoozeId(entryId)).catch(() => undefined);
+}
+
+function contentFor(note: EntryWithDate): Notifications.NotificationContentInput {
+  const { title, body } = splitNote(note.text_content);
+  const when = note.reminder_minutes ? ` (${reminderLabel(note.reminder_minutes)})` : '';
+  return {
+    title: `⏰ ${note.time_slot} · ${title || body}`,
+    body: body ? body.split('\n')[0] : `Chronos hatırlatması${when}`,
+    sound: 'default',
+    priority: Notifications.AndroidNotificationPriority.MAX,
+    categoryIdentifier: CATEGORY_ID,
+    data: { entryId: note.id, date: note.date },
+  };
+}
+
 /** Notun alarmını (yeniden) kurar; eski bildirimi iptal eder. Yeni bildirim kimliğini ya da null döner. */
 export async function scheduleReminder(note: EntryWithDate): Promise<string | null> {
   await cancelReminder(note.notification_id);
-  if (note.is_completed) return null;
+  if (note.is_completed) {
+    await cancelSnooze(note.id);
+    return null;
+  }
   const fire = reminderFireDate(note.date, note.time_slot, note.reminder_minutes);
   if (!shouldSchedule(fire)) return null;
+  // Tekrarlayan notun uzak tarihli tekrarları yaklaşınca (uygulama açıldıkça) kurulur
+  if (note.series_id && fire.getTime() > Date.now() + SERIES_WINDOW_DAYS * 86_400_000) return null;
   await setup();
   const perm = await Notifications.getPermissionsAsync();
   if (!perm.granted) return null;
-  const { title, body } = splitNote(note.text_content);
-  const when = note.reminder_minutes ? ` (${reminderLabel(note.reminder_minutes)})` : '';
   return Notifications.scheduleNotificationAsync({
-    content: {
-      title: `⏰ ${note.time_slot} · ${title || body}`,
-      body: body ? body.split('\n')[0] : `Chronos hatırlatması${when}`,
-      sound: 'default',
-      priority: Notifications.AndroidNotificationPriority.MAX,
-      data: { entryId: note.id, date: note.date },
-    },
+    content: contentFor(note),
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire, channelId: CHANNEL_ID },
   });
+}
+
+/** Alarmı birkaç dakika sonraya erteler (aynı not için tek ertelenmiş bildirim tutulur) */
+export async function snoozeReminder(note: EntryWithDate, minutes = SNOOZE_MINUTES): Promise<void> {
+  await setup();
+  const perm = await Notifications.getPermissionsAsync();
+  if (!perm.granted) return;
+  await Notifications.scheduleNotificationAsync({
+    identifier: snoozeId(note.id),
+    content: contentFor(note),
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: new Date(Date.now() + minutes * 60_000),
+      channelId: CHANNEL_ID,
+    },
+  });
+}
+
+export interface AlarmAction {
+  entryId: string;
+  date: string | null;
+  /** open: bildirime dokunuldu; snooze / done: bildirimdeki düğmeler */
+  action: 'open' | 'snooze' | 'done';
+}
+
+const handled = new Set<string>();
+
+/** Bildirime dokunma ve bildirim düğmelerini dinler; uygulama kapalıyken gelen son yanıtı da işler. */
+export function listenAlarmActions(handler: (a: AlarmAction) => void): () => void {
+  void setup();
+  const handle = (r: Notifications.NotificationResponse) => {
+    const data = r.notification.request.content.data as { entryId?: string; date?: string | null } | undefined;
+    if (!data?.entryId) return;
+    // Aynı yanıt hem başlangıçta hem dinleyiciden gelebilir
+    const key = `${r.notification.request.identifier}:${r.actionIdentifier}:${r.notification.date}`;
+    if (handled.has(key)) return;
+    handled.add(key);
+    const action = r.actionIdentifier === 'snooze' ? 'snooze' : r.actionIdentifier === 'done' ? 'done' : 'open';
+    handler({ entryId: data.entryId, date: data.date ?? null, action });
+    Notifications.clearLastNotificationResponse();
+  };
+  Notifications.getLastNotificationResponseAsync()
+    .then((r) => r && handle(r))
+    .catch(() => undefined);
+  const sub = Notifications.addNotificationResponseReceivedListener(handle);
+  return () => sub.remove();
 }

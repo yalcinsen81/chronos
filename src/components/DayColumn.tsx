@@ -7,12 +7,13 @@ import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
-import { Space, tagColor, Type, usePalette } from '../constants/theme';
+import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
 import { formatWeekday, fromISODate, todayISO, TR_MONTHS, type ISODate } from '../services/calendar';
 import { parseNote, splitNote } from '../services/notes';
 import { reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
+import Bell from './Bell';
 import Checkbox from './Checkbox';
 import { webNoOutline } from './webStyles';
 
@@ -31,7 +32,7 @@ export default function DayColumn({
   onOpen: (note: EntryWithDate, alarm?: boolean) => void;
 }) {
   const c = usePalette();
-  const { saveNote } = useAgenda();
+  const { saveNote, showDay, carryOver } = useAgenda();
   const [draft, setDraft] = useState('');
   const inputRef = useRef<TextInput>(null);
   const today = todayISO();
@@ -53,16 +54,39 @@ export default function DayColumn({
   return (
     <View style={[styles.column, { width }]}>
       <View style={styles.header}>
-        <Text style={[Type.title, { color: isToday ? c.accent : isPast ? c.textMuted : c.text }]}>
-          {formatWeekday(date)}
-        </Text>
+        <Pressable
+          onPress={() => showDay(date)}
+          accessibilityRole="button"
+          accessibilityLabel={`${formatWeekday(date)} gününü aç`}
+          style={({ pressed }) => [pressed && { opacity: 0.6 }]}
+        >
+          <View style={styles.titleRow}>
+            <Text style={[Type.title, { color: isToday ? c.accent : isPast ? c.textMuted : c.text }]}>
+              {formatWeekday(date)}
+            </Text>
+            <Ionicons name="expand-outline" size={14} color={c.textFaint} />
+          </View>
+        </Pressable>
         <View style={styles.subRow}>
           <Text style={[Type.caption, { color: isToday ? c.accent : c.textMuted }]}>
             {d.getDate()} {TR_MONTHS[d.getMonth()]}
             {isToday ? '  ·  Bugün' : ''}
           </Text>
-          {notes.length > 0 && (
-            <Text style={[Type.caption, { color: c.textFaint }]}>{open === 0 ? 'Hepsi bitti' : `${open} açık`}</Text>
+          {isPast && open > 0 ? (
+            <Pressable
+              onPress={() => carryOver(date)}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`${formatWeekday(date)} günündeki ${open} açık notu bugüne taşı`}
+              style={[styles.carry, { backgroundColor: c.accentSoft }]}
+            >
+              <Ionicons name="arrow-redo-outline" size={12} color={c.accent} />
+              <Text style={[Type.caption, { color: c.accent }]}>{open} açık · bugüne taşı</Text>
+            </Pressable>
+          ) : (
+            notes.length > 0 && (
+              <Text style={[Type.caption, { color: c.textFaint }]}>{open === 0 ? 'Hepsi bitti' : `${open} açık`}</Text>
+            )
           )}
         </View>
         <View style={[styles.headerRule, { backgroundColor: isToday ? c.accent : c.text }]} />
@@ -107,7 +131,7 @@ export default function DayColumn({
   );
 }
 
-function TaskLine({ note, onOpen }: { note: EntryWithDate; onOpen: (alarm?: boolean) => void }) {
+export function TaskLine({ note, onOpen }: { note: EntryWithDate; onOpen: (alarm?: boolean) => void }) {
   const c = usePalette();
   const { toggleNote } = useAgenda();
   const { title, body } = splitNote(note.text_content);
@@ -145,6 +169,7 @@ function TaskLine({ note, onOpen }: { note: EntryWithDate; onOpen: (alarm?: bool
           {title || body}
         </Text>
         {Boolean(title && body) && <Ionicons name="document-text-outline" size={14} color={c.textFaint} />}
+        {note.repeat && <Ionicons name="repeat" size={14} color={c.textFaint} accessibilityLabel="Tekrarlanıyor" />}
         {/* Saati olan notta zil her zaman görünür: tek dokunuşla alarm kurulur */}
         {!done && (alarm || note.time_slot) && (
           <Pressable
@@ -154,7 +179,7 @@ function TaskLine({ note, onOpen }: { note: EntryWithDate; onOpen: (alarm?: bool
             accessibilityLabel={alarm ? `Alarm ${reminderLabel(note.reminder_minutes)}` : 'Alarm kur'}
             style={[styles.bell, alarm && { backgroundColor: c.accentSoft }]}
           >
-            <Ionicons name={alarm ? 'alarm' : 'alarm-outline'} size={15} color={alarm ? c.accent : c.textFaint} />
+            <Bell active={alarm} color={alarm ? c.accent : c.textFaint} />
           </Pressable>
         )}
       </Pressable>
@@ -166,7 +191,16 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   column: { flex: 1, paddingHorizontal: Space.md },
   header: { paddingTop: Space.lg, gap: 2 },
-  subRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  carry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Space.sm,
+    height: 22,
+    borderRadius: Radius.pill,
+  },
+  subRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 22 },
   headerRule: { height: 2, marginTop: Space.sm, borderRadius: 1 },
   line: {
     height: LINE_HEIGHT,

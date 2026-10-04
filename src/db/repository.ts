@@ -45,6 +45,8 @@ const toEntry = (r: Row): EntryWithDate => ({
   color: (r.color as string | null) ?? null,
   reminder_minutes: r.reminder_minutes == null ? null : Number(r.reminder_minutes),
   notification_id: (r.notification_id as string | null) ?? null,
+  repeat: (r.repeat as string | null) ?? null,
+  series_id: (r.series_id as string | null) ?? null,
   date: (r.date as string | null) ?? null,
 });
 
@@ -55,10 +57,13 @@ export function createRepository(db: SqlDriver) {
     const rows = await db.execute('SELECT * FROM notebooks ORDER BY created_at LIMIT 1');
     if (rows[0]) return toNotebook(rows[0]);
     const nb: Notebook = { id: newId(), title, cover_type: 'leather', paper_type: 'ivory', created_at: Date.now() };
-    await db.execute(
-      'INSERT INTO notebooks (id, title, cover_type, paper_type, created_at) VALUES (?, ?, ?, ?, ?)',
-      [nb.id, nb.title, nb.cover_type, nb.paper_type, nb.created_at],
-    );
+    await db.execute('INSERT INTO notebooks (id, title, cover_type, paper_type, created_at) VALUES (?, ?, ?, ?, ?)', [
+      nb.id,
+      nb.title,
+      nb.cover_type,
+      nb.paper_type,
+      nb.created_at,
+    ]);
     return nb;
   }
 
@@ -77,7 +82,7 @@ export function createRepository(db: SqlDriver) {
       notebook_id: notebookId,
       date,
       page_type: pageType,
-      background_style: ((nb?.paper_type as PaperType) ?? 'ivory'),
+      background_style: (nb?.paper_type as PaperType) ?? 'ivory',
     };
     // Aynı anda iki istek gelirse UNIQUE indeks ikincisini yok sayar
     await db.execute(
@@ -129,13 +134,17 @@ export function createRepository(db: SqlDriver) {
     audioPath?: string | null;
     color?: string | null;
     reminderMinutes?: number | null;
+    repeat?: string | null;
+    /** Tekrar zincirinin kimliği; verilmeden repeat verilirse not zincirin ilk üyesidir */
+    seriesId?: string | null;
   }
 
   /** Tarih verilmezse giriş Havuz'a (Inbox) düşer. */
   async function createEntry(notebookId: string, input: NewEntry): Promise<EntryWithDate> {
     const page = input.date ? await getOrCreatePage(notebookId, input.date) : null;
+    const id = newId();
     const entry: EntryWithDate = {
-      id: newId(),
+      id,
       page_id: page?.id ?? null,
       time_slot: input.time ?? null,
       text_content: input.text.trim(),
@@ -146,11 +155,13 @@ export function createRepository(db: SqlDriver) {
       color: input.color ?? null,
       reminder_minutes: input.reminderMinutes ?? null,
       notification_id: null,
+      repeat: input.repeat ?? null,
+      series_id: input.seriesId ?? (input.repeat ? id : null),
       date: input.date ?? null,
     };
     await db.execute(
-      `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, audio_path, is_inbox, created_at, color, reminder_minutes)
-       VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+      `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, audio_path, is_inbox, created_at, color, reminder_minutes, repeat, series_id)
+       VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
       [
         entry.id,
         entry.page_id,
@@ -161,6 +172,8 @@ export function createRepository(db: SqlDriver) {
         entry.created_at,
         entry.color,
         entry.reminder_minutes,
+        entry.repeat,
+        entry.series_id,
       ],
     );
     return entry;
@@ -206,7 +219,11 @@ export function createRepository(db: SqlDriver) {
     if (time === undefined) {
       await db.execute('UPDATE entries SET page_id = ?, is_inbox = 0 WHERE id = ?', [page.id, entryId]);
     } else {
-      await db.execute('UPDATE entries SET page_id = ?, is_inbox = 0, time_slot = ? WHERE id = ?', [page.id, time, entryId]);
+      await db.execute('UPDATE entries SET page_id = ?, is_inbox = 0, time_slot = ? WHERE id = ?', [
+        page.id,
+        time,
+        entryId,
+      ]);
     }
   }
 
@@ -246,6 +263,50 @@ export function createRepository(db: SqlDriver) {
     await db.execute('UPDATE entries SET color = ? WHERE id = ?', [color, entryId]);
   }
 
+  // --- Tekrarlayan notlar ---------------------------------------------------
+  // Her tekrar gerçek bir nottur (kendi tamamlanma durumu ve alarmı vardır); aynı zincirdekiler series_id ile bağlıdır.
+  // Zincirin son notu (en geç tarihli) şablondur: sonraki tekrarlar ondan türetilir (services/series.ts).
+
+  /** Her zincirin en geç tarihli üyesi (yalnızca tekrarı açık zincirler) */
+  async function listSeriesTails(notebookId: string): Promise<EntryWithDate[]> {
+    const rows = await db.execute(
+      `${ENTRY_SELECT} WHERE p.notebook_id = ? AND e.repeat IS NOT NULL AND e.series_id IS NOT NULL
+       AND p.date = (SELECT MAX(p2.date) FROM entries e2 JOIN pages p2 ON p2.id = e2.page_id WHERE e2.series_id = e.series_id)
+       GROUP BY e.series_id`,
+      [notebookId],
+    );
+    return rows.map(toEntry);
+  }
+
+  /**
+   * Notun tekrarını değiştirir (null = durdur). Bu nottan sonraki, tamamlanmamış tekrarlar silinir; yeni kural
+   * ilk nottan sonrası için yeniden üretilir. Silinen notların bildirim kimliklerini döner (iptal edilsin).
+   */
+  async function changeSeries(entryId: string, rule: string | null): Promise<string[]> {
+    const entry = await getEntry(entryId);
+    if (!entry) return [];
+    const sid = entry.series_id ?? entry.id;
+    const cancelled: string[] = [];
+    if (entry.series_id && entry.date) {
+      const future = await db.execute(
+        `SELECT e.id AS id, e.notification_id AS nid FROM entries e JOIN pages p ON p.id = e.page_id
+         WHERE e.series_id = ? AND p.date > ? AND e.is_completed = 0`,
+        [sid, entry.date],
+      );
+      for (const f of future) {
+        if (f.nid) cancelled.push(String(f.nid));
+        await db.execute('DELETE FROM entries WHERE id = ?', [String(f.id)]);
+      }
+    }
+    if (rule) {
+      await db.execute('UPDATE entries SET series_id = ? WHERE id = ?', [sid, entryId]);
+      await db.execute('UPDATE entries SET repeat = ? WHERE series_id = ?', [rule, sid]);
+    } else if (entry.series_id) {
+      await db.execute('UPDATE entries SET repeat = NULL WHERE series_id = ?', [sid]);
+    }
+    return cancelled;
+  }
+
   async function deleteEntry(entryId: string) {
     await db.execute('DELETE FROM entries WHERE id = ?', [entryId]);
   }
@@ -272,6 +333,8 @@ export function createRepository(db: SqlDriver) {
     setNotificationId,
     getEntry,
     listEntriesWithReminder,
+    listSeriesTails,
+    changeSeries,
     deleteEntry,
   };
 }

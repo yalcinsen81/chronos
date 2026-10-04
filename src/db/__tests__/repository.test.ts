@@ -5,6 +5,7 @@
 import type { SqlDriver } from '../driver';
 import { migrate } from '../migrate';
 import { createRepository } from '../repository';
+import { materializeSeries } from '../../services/series';
 import { CREATE_TABLES } from '../schema';
 
 function createNodeDriver(): SqlDriver {
@@ -73,12 +74,25 @@ describe('repository', () => {
     const { repo, nb } = await setup();
     const page = await repo.getOrCreatePage(nb.id, '2026-10-04');
     const s = await repo.addStroke(page.id, {
-      points: [[10.123, 20.456, 0.5], [11, 21, 0.73]],
+      points: [
+        [10.123, 20.456, 0.5],
+        [11, 21, 0.73],
+      ],
       color: '#1B2A4A',
       width: 4,
     });
     const list = await repo.listStrokes(page.id);
-    expect(list).toEqual([{ id: s.id, points: [[10.1, 20.5, 0.5], [11, 21, 0.73]], color: '#1B2A4A', width: 4 }]);
+    expect(list).toEqual([
+      {
+        id: s.id,
+        points: [
+          [10.1, 20.5, 0.5],
+          [11, 21, 0.73],
+        ],
+        color: '#1B2A4A',
+        width: 4,
+      },
+    ]);
     await repo.deleteStroke(s.id);
     expect(await repo.listStrokes(page.id)).toHaveLength(0);
   });
@@ -103,17 +117,29 @@ describe('repository', () => {
 
     // Eski (v1) şemalı veri tabanı: color sütunu yok
     const driver = createNodeDriver();
-    for (const sql of CREATE_TABLES)
-      await driver.execute(sql.replace(',\n    color TEXT,\n    reminder_minutes INTEGER,\n    notification_id TEXT', ''));
+    for (const sql of CREATE_TABLES.filter((q) => !q.includes('idx_entries_series')))
+      await driver.execute(
+        sql.replace(
+          ',\n    color TEXT,\n    reminder_minutes INTEGER,\n    notification_id TEXT,\n    repeat TEXT,\n    series_id TEXT',
+          '',
+        ),
+      );
     await driver.execute('PRAGMA user_version = 1');
     await migrate(driver);
     const cols = await driver.execute("SELECT name FROM pragma_table_info('entries')");
-    expect(cols.map((c) => c.name)).toEqual(expect.arrayContaining(['color', 'reminder_minutes', 'notification_id']));
+    expect(cols.map((c) => c.name)).toEqual(
+      expect.arrayContaining(['color', 'reminder_minutes', 'notification_id', 'repeat', 'series_id']),
+    );
   });
 
   it('alarm dakikasını ve bildirim kimliğini saklar', async () => {
     const { repo, nb } = await setup();
-    const e = await repo.createEntry(nb.id, { text: 'Diş hekimi', date: '2026-10-06', time: '14:30', reminderMinutes: 15 });
+    const e = await repo.createEntry(nb.id, {
+      text: 'Diş hekimi',
+      date: '2026-10-06',
+      time: '14:30',
+      reminderMinutes: 15,
+    });
     expect((await repo.getEntry(e.id))?.reminder_minutes).toBe(15);
     await repo.setNotificationId(e.id, 'abc');
     expect((await repo.listEntriesWithReminder()).map((x) => x.notification_id)).toEqual(['abc']);
@@ -131,5 +157,49 @@ describe('repository', () => {
     await repo.createEntry(nb.id, { text: 'Gelecek hafta', date: '2026-10-12' });
     const list = await repo.listEntriesBetween(nb.id, '2026-10-05', '2026-10-11');
     expect(list.map((e) => e.text_content)).toEqual(['Pazartesi sabah', 'Pazartesi öğleden sonra', 'Çarşamba']);
+  });
+
+  it('tekrarlayan not: zincir üretilir, tekrar tekrar çağrılınca çoğalmaz, durdurulunca gelecek silinir', async () => {
+    const { repo, nb } = await setup();
+    const first = await repo.createEntry(nb.id, { text: 'İlaç', date: '2026-10-04', time: '08:00', repeat: 'daily' });
+    expect(first.series_id).toBe(first.id);
+    const created = await materializeSeries(repo, nb.id, '2026-10-08');
+    expect(created).toHaveLength(4);
+    expect(await materializeSeries(repo, nb.id, '2026-10-08')).toHaveLength(0);
+    const week = await repo.listEntriesBetween(nb.id, '2026-10-04', '2026-10-10');
+    expect(week.map((e) => e.date)).toEqual(['2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08']);
+    expect(week[3]).toMatchObject({ text_content: 'İlaç', time_slot: '08:00', repeat: 'daily', series_id: first.id });
+
+    // 5 Ekim tamamlanır; 6 Ekim'den durdurulursa 7-8 silinir, tamamlanan ve önceki kalır
+    await repo.toggleEntry(week[1].id);
+    const stopFrom = week[2];
+    await repo.changeSeries(stopFrom.id, null);
+    const after = await repo.listEntriesBetween(nb.id, '2026-10-04', '2026-10-10');
+    expect(after.map((e) => e.date)).toEqual(['2026-10-04', '2026-10-05', '2026-10-06']);
+    expect(after.every((e) => e.repeat === null)).toBe(true);
+    expect(await materializeSeries(repo, nb.id, '2026-10-20')).toHaveLength(0);
+  });
+
+  it('tekrar kuralı değişince sonraki tekrarlar yeni kurala göre yeniden üretilir', async () => {
+    const { repo, nb } = await setup();
+    const e = await repo.createEntry(nb.id, { text: 'Spor', date: '2026-10-05', repeat: 'daily' });
+    await materializeSeries(repo, nb.id, '2026-10-09');
+    await repo.changeSeries(e.id, 'weekly');
+    await materializeSeries(repo, nb.id, '2026-10-20');
+    const all = await repo.listEntriesBetween(nb.id, '2026-10-01', '2026-10-31');
+    expect(all.map((x) => x.date)).toEqual(['2026-10-05', '2026-10-12', '2026-10-19']);
+  });
+
+  it("v3 veri tabanı v4'e yükseltilir", async () => {
+    const driver = createNodeDriver();
+    for (const sql of CREATE_TABLES.filter((q) => !q.includes('idx_entries_series'))) {
+      await driver.execute(sql.replace(/,\s*repeat TEXT,\s*series_id TEXT/, ''));
+    }
+    await driver.execute('PRAGMA user_version = 3');
+    await migrate(driver);
+    const repo = createRepository(driver);
+    const nb = await repo.ensureDefaultNotebook();
+    const e = await repo.createEntry(nb.id, { text: 'x', date: '2026-10-04', repeat: 'weekly' });
+    expect((await repo.getEntry(e.id))?.repeat).toBe('weekly');
   });
 });
