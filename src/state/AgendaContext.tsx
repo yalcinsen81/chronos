@@ -1,4 +1,4 @@
-// Uygulama durumu: veri tabanı, seçili gün, o günün notları ve not işlemleri.
+// Uygulama durumu: veri tabanı, seçili gün ve onun haftası, haftanın notları ve not işlemleri.
 // Alarmlı notlarda her değişiklikten sonra yerel bildirim yeniden kurulur (services/reminders).
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -6,13 +6,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { SqlDriver } from '../db/driver';
 import { migrate } from '../db/migrate';
 import { createRepository, type EntryWithDate, type Repository } from '../db/repository';
-import { todayISO, type ISODate } from '../services/calendar';
+import { addDays, startOfWeek, todayISO, type ISODate } from '../services/calendar';
 import { haptics } from '../services/haptics';
 import { cancelReminder, scheduleReminder } from '../services/reminders';
 
 export interface NoteInput {
-  /** Verilmezse yeni not seçili güne eklenir */
+  /** Verilmezse yeni not oluşturulur */
   id?: string;
+  /** Yeni notun günü; verilmezse seçili gün */
+  date?: ISODate;
   /** İlk satır başlık, kalan satırlar açıklama */
   text: string;
   time: string | null;
@@ -27,8 +29,12 @@ interface AgendaState {
   notebookId: string | null;
   /** Seçili gün */
   date: ISODate;
-  /** Seçili günün notları (saatliler önce, saate göre sıralı) */
-  notes: EntryWithDate[];
+  /** Seçili günün haftası (Pazartesi) */
+  weekStart: ISODate;
+  /** Haftanın 7 günü */
+  weekDays: ISODate[];
+  /** Haftadaki notlar, güne göre (saatliler önce, saate göre sıralı) */
+  weekNotes: Record<ISODate, EntryWithDate[]>;
   /** Herhangi bir not değiştiğinde artar; takvim noktaları buna göre yenilenir */
   revision: number;
   selectDate: (date: ISODate) => void;
@@ -44,7 +50,9 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   const [ready, setReady] = useState(false);
   const [notebookId, setNotebookId] = useState<string | null>(null);
   const [date, setDate] = useState<ISODate>(todayISO());
-  const [notes, setNotes] = useState<EntryWithDate[]>([]);
+  const [weekNotes, setWeekNotes] = useState<Record<ISODate, EntryWithDate[]>>({});
+  const weekStart = startOfWeek(date);
+  const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const [revision, setRevision] = useState(0);
   const dateRef = useRef(date);
   dateRef.current = date;
@@ -83,13 +91,16 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   useEffect(() => {
     if (!notebookId) return;
     let cancelled = false;
-    repo.listEntriesForDate(notebookId, date).then((list) => {
-      if (!cancelled) setNotes(list);
+    repo.listEntriesBetween(notebookId, weekDays[0], weekDays[6]).then((list) => {
+      if (cancelled) return;
+      const byDay: Record<ISODate, EntryWithDate[]> = {};
+      for (const e of list) (byDay[e.date as ISODate] ??= []).push(e);
+      setWeekNotes(byDay);
     });
     return () => {
       cancelled = true;
     };
-  }, [repo, notebookId, date, revision]);
+  }, [repo, notebookId, weekDays, revision]);
 
   const bump = useCallback(() => setRevision((r) => r + 1), []);
 
@@ -110,7 +121,7 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
           time: input.time,
           color: input.color,
           reminderMinutes: input.reminder,
-          date: dateRef.current,
+          date: input.date ?? dateRef.current,
         });
         id = e.id;
         haptics.tap();
@@ -146,7 +157,20 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     [repo, bump],
   );
 
-  const value: AgendaState = { ready, repo, notebookId, date, notes, revision, selectDate, saveNote, toggleNote, deleteNote };
+  const value: AgendaState = {
+    ready,
+    repo,
+    notebookId,
+    date,
+    weekStart,
+    weekDays,
+    weekNotes,
+    revision,
+    selectDate,
+    saveNote,
+    toggleNote,
+    deleteNote,
+  };
 
   return <AgendaContext.Provider value={value}>{children}</AgendaContext.Provider>;
 }

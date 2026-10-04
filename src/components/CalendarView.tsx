@@ -23,7 +23,7 @@ import {
 } from '../services/calendar';
 import { useAgenda } from '../state/AgendaContext';
 
-export default function CalendarView({ alwaysMonth = false }: { alwaysMonth?: boolean }) {
+export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMonth?: boolean; onPick?: () => void }) {
   const c = usePalette();
   const { date, selectDate, repo, notebookId, revision } = useAgenda();
   const [expanded, setExpanded] = useState(alwaysMonth);
@@ -96,7 +96,10 @@ export default function CalendarView({ alwaysMonth = false }: { alwaysMonth?: bo
               return (
                 <Pressable
                   key={cell.iso}
-                  onPress={() => selectDate(cell.iso)}
+                  onPress={() => {
+                    selectDate(cell.iso);
+                    onPick?.();
+                  }}
                   style={styles.cell}
                   accessibilityRole="button"
                   accessibilityLabel={`${cell.day} ${TR_MONTHS[fromISODate(cell.iso).getMonth()]}`}

@@ -14,7 +14,7 @@ import { joinNote, normalizeTime, parseNote, splitNote } from '../services/notes
 import { remindersSupported, requestReminderPermission } from '../services/reminders';
 import { REMINDER_OPTIONS, reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
-import { Checkbox } from './NoteRow';
+import Checkbox from './Checkbox';
 import { webNoOutline } from './webStyles';
 
 export default function NoteEditor({ note, onClose }: { note?: EntryWithDate; onClose: () => void }) {

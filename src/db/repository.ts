@@ -175,6 +175,16 @@ export function createRepository(db: SqlDriver) {
     return rows.map(toEntry);
   }
 
+  /** Haftalık görünüm: tarih aralığındaki tüm notlar (gün, saat, eklenme sırasına göre) */
+  async function listEntriesBetween(notebookId: string, from: ISODate, to: ISODate): Promise<EntryWithDate[]> {
+    const rows = await db.execute(
+      `${ENTRY_SELECT} WHERE p.notebook_id = ? AND p.date BETWEEN ? AND ?
+       ORDER BY p.date, e.time_slot IS NULL, e.time_slot, e.created_at`,
+      [notebookId, from, to],
+    );
+    return rows.map(toEntry);
+  }
+
   /** Ay/yıl görünümündeki mürekkep noktaları için gün başına giriş sayısı */
   async function countEntriesByDate(notebookId: string, from: ISODate, to: ISODate): Promise<Record<ISODate, number>> {
     const rows = await db.execute(
@@ -250,6 +260,7 @@ export function createRepository(db: SqlDriver) {
     deleteStroke,
     createEntry,
     listEntriesForDate,
+    listEntriesBetween,
     countEntriesByDate,
     listInbox,
     moveEntryToDate,

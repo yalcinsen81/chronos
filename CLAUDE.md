@@ -1,7 +1,8 @@
 # Chronos — Mimari Kurallar
 
-Sade ajanda: takvimden gün seç, notunu hemen yaz. Tasarım dili Things 3'ten (beyaz alan, büyük gün
-başlığı, yüzen "+" düğmesi, yerinde açılan not kartı), takvim Fantastical / Apple Takvim'den esinlenir.
+Haftalık planlayıcı: her gün çizgili satırlı bir sütun; boş satıra dokun, yaz, Enter. Düzen
+[WeekToDo](https://github.com/manuelernestog/weektodo)'dan esinlenir (GPL-3.0; kodu kopyalanmaz, yalnızca düzen).
+Renkler ve not kartı Things 3 dilinde kalır.
 Expo SDK 57 + React Native + TypeScript. Expo Go'da çalışır.
 
 > 2026-10-04: Kullanıcı ilk "fiziksel defter" tasarımını (deri kapak, Skia kağıt, el yazısı, sayfa kıvırma,
@@ -27,10 +28,13 @@ Expo'ya özgü genel kurallar için `AGENTS.md` dosyasını da oku.
 App.tsx                 Kök: veri tabanı sürücüsü, AgendaProvider, yükleniyor ekranı
 index.web.ts            Web girişi: sql.js yüklendikten sonra App'i kaydeder
 src/
-  components/           AgendaScreen (düzen + "+" düğmesi), CalendarView (hafta/ay), DayHeader,
-                        NoteRow (kapalı satır), NoteEditor (açık not kartı: başlık, açıklama, saat, renk)
+  components/           AgendaScreen (geniş: yan yana sütunlar, telefon: sayfa sayfa günler),
+                        WeekHeader (ay/hafta, oklar, Bugün, gün şeridi, ay takvimi penceresi),
+                        DayColumn (gün sütunu: çizgili satırlar + hızlı ekleme satırı),
+                        NoteSheet + NoteEditor (not ayrıntı kartı: açıklama, saat, renk, alarm),
+                        CalendarView (ay takvimi), Checkbox
   constants/theme.ts    Açık/koyu palet, not renk etiketleri, yazı tipleri, ölçüler, usePalette()
-  state/AgendaContext   Seçili gün, o günün notları, ekle/düzenle/tamamla/sil
+  state/AgendaContext   Seçili gün, haftanın 7 günü ve notları (weekNotes), ekle/düzenle/tamamla/sil
   services/             calendar.ts (tarih yardımcıları), notes.ts (saat ayıklama/normalleştirme,
                         başlık+açıklama: ilk satır başlık), reminderTime.ts (alarm anı, saf),
                         reminders.ts (bildirim kurma/iptal), haptics.ts
@@ -39,7 +43,7 @@ src/
 
 ## Kurallar
 
-1. **Sade kal.** Tek ekran; takvim + notlar. Yeni görsel öğe eklemeden önce Things 3'te karşılığı var mı diye bak. Yeni özellik bu akışı (gün seç → yaz) yavaşlatmamalı.
+1. **Sade kal.** Tek ekran; hafta sütunları. Yeni özellik "satıra dokun → yaz → Enter" akışını yavaşlatmamalı.
 2. **Renkler `theme.ts`'den.** Bileşenlerde renk kodu yazılmaz; `usePalette()` ile açık/koyu temaya uyulur.
 3. **Şema değişikliği** `schema.ts`'te SCHEMA_VERSION artırılıp `UPGRADES`'e ALTER adımı eklenerek yapılır.
 4. **Local-first.** Tüm veri SQLite'ta; ağ bağımlılığı yok. UI SQL yazmaz, `repository.ts` kullanır.

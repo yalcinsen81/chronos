@@ -122,4 +122,14 @@ describe('repository', () => {
     await repo.setEntryReminder(e.id, null);
     expect((await repo.getEntry(e.id))?.reminder_minutes).toBeNull();
   });
+
+  it('hafta aralığındaki notları gün ve saate göre sıralı getirir', async () => {
+    const { repo, nb } = await setup();
+    await repo.createEntry(nb.id, { text: 'Çarşamba', date: '2026-10-07' });
+    await repo.createEntry(nb.id, { text: 'Pazartesi öğleden sonra', date: '2026-10-05', time: '15:00' });
+    await repo.createEntry(nb.id, { text: 'Pazartesi sabah', date: '2026-10-05', time: '09:00' });
+    await repo.createEntry(nb.id, { text: 'Gelecek hafta', date: '2026-10-12' });
+    const list = await repo.listEntriesBetween(nb.id, '2026-10-05', '2026-10-11');
+    expect(list.map((e) => e.text_content)).toEqual(['Pazartesi sabah', 'Pazartesi öğleden sonra', 'Çarşamba']);
+  });
 });
