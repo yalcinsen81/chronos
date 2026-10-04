@@ -38,6 +38,9 @@ npm run web:preview          # dist-web/ klasörüne web derlemesi üretir
 npx serve dist-web           # veya: python3 -m http.server -d dist-web 8080
 ```
 
+Zip paketinde hazır derlenmiş bir kopya `web-onizleme/` klasöründedir: `python3 -m http.server -d web-onizleme 8080`
+komutuyla açıp tarayıcıda http://localhost:8080 adresine gidin (dosyaya çift tıklamak wasm yüzünden çalışmaz).
+
 Web sürümünde sayfa kıvırma animasyonu, haptik titreşim ve ses kaydı yoktur; bunlar yalnızca cihazda çalışır.
 Veriler tarayıcının localStorage alanında tutulur.
 
