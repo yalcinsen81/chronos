@@ -53,7 +53,7 @@ function Blob({
   );
 }
 
-export default function Aurora({ height = 170 }: { height?: number }) {
+export default function Aurora({ height = 170, radius = 0 }: { height?: number; radius?: number }) {
   const c = usePalette();
   const [still, setStill] = useState(false);
   useEffect(() => {
@@ -63,39 +63,42 @@ export default function Aurora({ height = 170 }: { height?: number }) {
   }, []);
   const dark = c.scheme === 'dark';
   return (
-    <View pointerEvents="none" style={[styles.wrap, { height }]}>
+    <View
+      pointerEvents="none"
+      style={[styles.wrap, { height, borderTopLeftRadius: radius, borderTopRightRadius: radius }]}
+    >
       <Blob
         color={c.accent}
         size={260}
         left={-70}
-        top={-120}
+        top={-165}
         dx={90}
         dy={30}
         period={9000}
         still={still}
-        opacity={dark ? 0.3 : 0.26}
+        opacity={dark ? 0.36 : 0.34}
       />
       <Blob
         color={c.star}
         size={220}
         left={150}
-        top={-110}
+        top={-140}
         dx={-80}
         dy={40}
         period={11000}
         still={still}
-        opacity={dark ? 0.24 : 0.28}
+        opacity={dark ? 0.3 : 0.36}
       />
       <Blob
         color={c.accent}
         size={200}
         left={300}
-        top={-90}
+        top={-125}
         dx={-120}
         dy={20}
         period={13000}
         still={still}
-        opacity={dark ? 0.22 : 0.18}
+        opacity={dark ? 0.26 : 0.24}
       />
     </View>
   );

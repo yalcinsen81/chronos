@@ -22,6 +22,7 @@ import { BLOCK_MINUTES, HOUR_HEIGHT, hourRange, layoutDay, timeToMinutes } from 
 import { parseNote, splitNote } from '../services/notes';
 import { reminderFireDate, reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
+import Aurora from './Aurora';
 import Bell from './Bell';
 import Checkbox from './Checkbox';
 import { CelebrationLayer, useCelebrate } from './Confetti';
@@ -45,7 +46,7 @@ export default function DayView({
   onNew: (date: ISODate, time: string | null) => void;
 }) {
   const c = usePalette();
-  const { saveNote, selectDate } = useAgenda();
+  const { saveNote, selectDate, aurora } = useAgenda();
   const today = todayISO();
   const isToday = date === today;
   const d = fromISODate(date);
@@ -120,6 +121,7 @@ export default function DayView({
   return (
     <View style={styles.flex} {...pan.panHandlers}>
       <View style={styles.fixedWrap}>
+        {aurora && isToday && <Aurora height={130} />}
         <Animated.View key={date} entering={FadeIn.duration(200)} style={styles.sheet}>
           <View style={styles.header}>
             <Text style={[Type.largeTitle, { color: isToday ? c.accent : c.text }]}>{formatWeekday(date)}</Text>

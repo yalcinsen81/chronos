@@ -14,6 +14,7 @@ import { parseNote, splitNote } from '../services/notes';
 import { reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
 import Bell from './Bell';
+import Aurora from './Aurora';
 import Checkbox from './Checkbox';
 import { CelebrationLayer, useCelebrate } from './Confetti';
 import EmptyDay from './EmptyDay';
@@ -35,7 +36,7 @@ export default function DayColumn({
   onOpen: (note: EntryWithDate, alarm?: boolean) => void;
 }) {
   const c = usePalette();
-  const { saveNote, showDay, carryOver } = useAgenda();
+  const { saveNote, showDay, carryOver, aurora } = useAgenda();
   const burst = useCelebrate(notes.filter((n) => !n.is_completed).length, notes.length);
   const [draft, setDraft] = useState('');
   const inputRef = useRef<TextInput>(null);
@@ -57,6 +58,7 @@ export default function DayColumn({
 
   return (
     <View style={[styles.column, { width }, isToday && { backgroundColor: c.accentSoft + '80' }]}>
+      {aurora && isToday && <Aurora height={130} radius={Radius.lg} />}
       <View style={styles.header}>
         <View style={styles.headRow}>
           <Pressable
