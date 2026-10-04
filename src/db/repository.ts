@@ -43,6 +43,8 @@ const toEntry = (r: Row): EntryWithDate => ({
   is_inbox: Number(r.is_inbox) === 1,
   created_at: Number(r.created_at ?? 0),
   color: (r.color as string | null) ?? null,
+  reminder_minutes: r.reminder_minutes == null ? null : Number(r.reminder_minutes),
+  notification_id: (r.notification_id as string | null) ?? null,
   date: (r.date as string | null) ?? null,
 });
 
@@ -126,6 +128,7 @@ export function createRepository(db: SqlDriver) {
     time?: string | null;
     audioPath?: string | null;
     color?: string | null;
+    reminderMinutes?: number | null;
   }
 
   /** Tarih verilmezse giriş Havuz'a (Inbox) düşer. */
@@ -141,11 +144,13 @@ export function createRepository(db: SqlDriver) {
       is_inbox: !page,
       created_at: Date.now(),
       color: input.color ?? null,
+      reminder_minutes: input.reminderMinutes ?? null,
+      notification_id: null,
       date: input.date ?? null,
     };
     await db.execute(
-      `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, audio_path, is_inbox, created_at, color)
-       VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+      `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, audio_path, is_inbox, created_at, color, reminder_minutes)
+       VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
       [
         entry.id,
         entry.page_id,
@@ -155,6 +160,7 @@ export function createRepository(db: SqlDriver) {
         entry.is_inbox ? 1 : 0,
         entry.created_at,
         entry.color,
+        entry.reminder_minutes,
       ],
     );
     return entry;
@@ -207,6 +213,25 @@ export function createRepository(db: SqlDriver) {
     await db.execute('UPDATE entries SET text_content = ?, time_slot = ? WHERE id = ?', [text.trim(), time, entryId]);
   }
 
+  async function setEntryReminder(entryId: string, minutes: number | null) {
+    await db.execute('UPDATE entries SET reminder_minutes = ? WHERE id = ?', [minutes, entryId]);
+  }
+
+  async function setNotificationId(entryId: string, notificationId: string | null) {
+    await db.execute('UPDATE entries SET notification_id = ? WHERE id = ?', [notificationId, entryId]);
+  }
+
+  async function getEntry(entryId: string): Promise<EntryWithDate | null> {
+    const rows = await db.execute(`${ENTRY_SELECT} WHERE e.id = ?`, [entryId]);
+    return rows[0] ? toEntry(rows[0]) : null;
+  }
+
+  /** Uygulama açılışında alarmları yeniden kurmak için: alarmı olan, tamamlanmamış tüm notlar */
+  async function listEntriesWithReminder(): Promise<EntryWithDate[]> {
+    const rows = await db.execute(`${ENTRY_SELECT} WHERE e.reminder_minutes IS NOT NULL AND e.is_completed = 0`);
+    return rows.map(toEntry);
+  }
+
   async function setEntryColor(entryId: string, color: string | null) {
     await db.execute('UPDATE entries SET color = ? WHERE id = ?', [color, entryId]);
   }
@@ -232,6 +257,10 @@ export function createRepository(db: SqlDriver) {
     toggleEntry,
     updateEntry,
     setEntryColor,
+    setEntryReminder,
+    setNotificationId,
+    getEntry,
+    listEntriesWithReminder,
     deleteEntry,
   };
 }

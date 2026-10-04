@@ -8,6 +8,7 @@ import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanim
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
 import { splitNote } from '../services/notes';
+import { reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
 
 export function Checkbox({ checked, onPress, tint }: { checked: boolean; onPress?: () => void; tint?: string | null }) {
@@ -33,7 +34,8 @@ export default function NoteRow({ note, onOpen }: { note: EntryWithDate; onOpen:
   const { title, body } = splitNote(note.text_content);
   const tint = tagColor(note.color, c);
   const done = note.is_completed;
-  const hasMeta = Boolean(note.time_slot || tint || body);
+  const alarm = note.reminder_minutes != null && !done;
+  const hasMeta = Boolean(note.time_slot || tint || body || alarm);
 
   return (
     <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(140)} layout={LinearTransition.duration(200)}>
@@ -55,6 +57,14 @@ export default function NoteRow({ note, onOpen }: { note: EntryWithDate; onOpen:
                 <View style={styles.metaItem}>
                   <Ionicons name="time-outline" size={13} color={c.textMuted} />
                   <Text style={[Type.caption, { color: c.textMuted, fontVariant: ['tabular-nums'] }]}>{note.time_slot}</Text>
+                </View>
+              )}
+              {alarm && (
+                <View style={styles.metaItem} accessibilityLabel={`Alarm ${reminderLabel(note.reminder_minutes)}`}>
+                  <Ionicons name="alarm" size={13} color={c.accent} />
+                  {note.reminder_minutes !== 0 && (
+                    <Text style={[Type.caption, { color: c.accent }]}>{reminderLabel(note.reminder_minutes, true)}</Text>
+                  )}
                 </View>
               )}
               {tint && <View style={[styles.tag, { backgroundColor: tint }]} />}

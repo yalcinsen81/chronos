@@ -17,6 +17,7 @@ Expo'ya özgü genel kurallar için `AGENTS.md` dosyasını da oku.
 | İkonlar | `@expo/vector-icons/Ionicons` (yalnızca Ionicons içe aktarılır; tüm paket web paketini şişirir) |
 | Yazı tipi | Sistem yazı tipi (iOS'ta SF Pro); ölçek `theme.ts` → `Type` |
 | Animasyon | `react-native-reanimated` (satır giriş/çıkış, kart açılışı, takvim genişleme) |
+| Alarm | `expo-notifications` yerel bildirim (Expo Go'da çalışır; web'de `reminders.web.ts` boş) |
 | Haptik | `expo-haptics` (web'de kapalı) |
 | Güvenli alan | `react-native-safe-area-context` |
 
@@ -31,7 +32,8 @@ src/
   constants/theme.ts    Açık/koyu palet, not renk etiketleri, yazı tipleri, ölçüler, usePalette()
   state/AgendaContext   Seçili gün, o günün notları, ekle/düzenle/tamamla/sil
   services/             calendar.ts (tarih yardımcıları), notes.ts (saat ayıklama/normalleştirme,
-                        başlık+açıklama: ilk satır başlık), haptics.ts
+                        başlık+açıklama: ilk satır başlık), reminderTime.ts (alarm anı, saf),
+                        reminders.ts (bildirim kurma/iptal), haptics.ts
   db/                   schema.ts, migrate.ts, repository.ts, sürücüler
 ```
 
@@ -45,6 +47,10 @@ src/
 6. **Expo Go uyumu korunur.** Expo Go'da olmayan native modül eklenmez; gerekiyorsa önce kullanıcıya sorulur.
 7. Paket eklerken `npx expo install <paket>`; ağ kısıtlıysa sürümü `node_modules/expo/bundledNativeModules.json`'dan al.
 8. Kod yorumları Türkçe yazılır.
+
+9. **Alarm tutarlılığı:** Notu değiştiren her işlem AgendaContext üzerinden geçer; `syncReminder` bildirimi
+   veri tabanının son haline göre yeniden kurar ve `notification_id`'yi saklar. Açılışta tüm alarmlar yeniden kurulur.
+   Bu, gerçek bir "çalar saat" değil, sesli ve yüksek öncelikli bildirimdir.
 
 ## Komutlar
 

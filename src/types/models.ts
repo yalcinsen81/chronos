@@ -41,4 +41,6 @@ export interface Entry {
   is_inbox: boolean;
   created_at: number; // Unix ms; aynı saat çizgisindeki girişlerin sırası
   color: string | null; // renk etiketi anahtarı (theme.ts → NoteTags)
+  reminder_minutes: number | null; // alarm: saatten kaç dk önce (0 = tam saatinde); null = alarm yok
+  notification_id: string | null; // zamanlanmış yerel bildirimin kimliği
 }

@@ -103,10 +103,23 @@ describe('repository', () => {
 
     // Eski (v1) şemalı veri tabanı: color sütunu yok
     const driver = createNodeDriver();
-    for (const sql of CREATE_TABLES) await driver.execute(sql.replace(',\n    color TEXT', ''));
+    for (const sql of CREATE_TABLES)
+      await driver.execute(sql.replace(',\n    color TEXT,\n    reminder_minutes INTEGER,\n    notification_id TEXT', ''));
     await driver.execute('PRAGMA user_version = 1');
     await migrate(driver);
     const cols = await driver.execute("SELECT name FROM pragma_table_info('entries')");
-    expect(cols.map((c) => c.name)).toContain('color');
+    expect(cols.map((c) => c.name)).toEqual(expect.arrayContaining(['color', 'reminder_minutes', 'notification_id']));
+  });
+
+  it('alarm dakikasını ve bildirim kimliğini saklar', async () => {
+    const { repo, nb } = await setup();
+    const e = await repo.createEntry(nb.id, { text: 'Diş hekimi', date: '2026-10-06', time: '14:30', reminderMinutes: 15 });
+    expect((await repo.getEntry(e.id))?.reminder_minutes).toBe(15);
+    await repo.setNotificationId(e.id, 'abc');
+    expect((await repo.listEntriesWithReminder()).map((x) => x.notification_id)).toEqual(['abc']);
+    await repo.toggleEntry(e.id);
+    expect(await repo.listEntriesWithReminder()).toHaveLength(0);
+    await repo.setEntryReminder(e.id, null);
+    expect((await repo.getEntry(e.id))?.reminder_minutes).toBeNull();
   });
 });

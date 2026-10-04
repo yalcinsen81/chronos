@@ -15,6 +15,7 @@ export interface Palette {
   textFaint: string;
   separator: string;
   accent: string; // mavi: "+" düğmesi, seçili gün
+  accentSoft: string; // açık mavi zemin: etkin alarm çipi
   onAccent: string;
   today: string; // bugünün rakamı (Apple takvim kırmızısı)
   star: string; // "Bugün" başlığındaki yıldız (Things sarısı)
@@ -34,6 +35,7 @@ export const LightPalette: Palette = {
   textFaint: '#B4B8BF',
   separator: '#E7E8EB',
   accent: '#2E7CF6',
+  accentSoft: '#E6F0FE',
   onAccent: '#FFFFFF',
   today: '#E6483D',
   star: '#F4C430',
@@ -53,6 +55,7 @@ export const DarkPalette: Palette = {
   textFaint: '#5E626A',
   separator: '#33353B',
   accent: '#4A8DF8',
+  accentSoft: '#22324D',
   onAccent: '#FFFFFF',
   today: '#FF6A5E',
   star: '#F4C430',
