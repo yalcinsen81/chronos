@@ -4,18 +4,20 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeInLeft, FadeInRight } from 'react-native-reanimated';
 
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
 import { addDays, formatWeekday, fromISODate, todayISO, TR_MONTHS, type ISODate } from '../services/calendar';
 import { BLOCK_MINUTES, HOUR_HEIGHT, hourRange, layoutDay, timeToMinutes } from '../services/dayLayout';
-import { parseNote, splitNote } from '../services/notes';
+import { checklistProgress } from '../services/checklist';
+import { parseSmart } from '../services/naturalDate';
+import { splitNote } from '../services/notes';
 import { reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
 import Bell from './Bell';
 import Checkbox from './Checkbox';
-import { TaskLine } from './DayColumn';
+import { sortOpenFirst, StrikeText, TaskLine } from './DayColumn';
 import EmptyDay from './EmptyDay';
 import { webNoOutline } from './webStyles';
 
@@ -35,12 +37,19 @@ export default function DayView({
 }) {
   const c = usePalette();
   const { saveNote, selectDate } = useAgenda();
+  // Gün değişince içerik değişim yönüne doğru kayarak gelir
+  const prevDate = useRef(date);
+  const dir = date > prevDate.current ? 1 : date < prevDate.current ? -1 : 0;
+  useEffect(() => {
+    prevDate.current = date;
+  }, [date]);
+  const dayEntering = (dir > 0 ? FadeInRight : dir < 0 ? FadeInLeft : FadeIn).duration(240);
   const today = todayISO();
   const isToday = date === today;
   const d = fromISODate(date);
 
   const timed = useMemo(() => notes.filter((n) => n.time_slot), [notes]);
-  const untimed = useMemo(() => notes.filter((n) => !n.time_slot), [notes]);
+  const untimed = useMemo(() => sortOpenFirst(notes.filter((n) => !n.time_slot)), [notes]);
   const open = notes.filter((n) => !n.is_completed).length;
   const { start, end } = useMemo(() => hourRange(timed.map((n) => timeToMinutes(n.time_slot!))), [timed]);
   const placed = useMemo(
@@ -86,8 +95,9 @@ export default function DayView({
     const value = draft.trim();
     if (!value) return;
     setDraft('');
-    const { text, time } = parseNote(value);
-    await saveNote({ text, time, color: null, reminder: null, date });
+    const { text, time, date: when } = parseSmart(value);
+    await saveNote({ text, time, color: null, reminder: null, date: when ?? date });
+    if (when && when !== date) selectDate(when);
   };
 
   // Sola/sağa kaydırma: önceki / sonraki gün
@@ -134,7 +144,7 @@ export default function DayView({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View key={date} entering={FadeIn.duration(200)} style={styles.sheet}>
+        <Animated.View key={date} entering={dayEntering} style={styles.sheet}>
           <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>GÜN BOYU</Text>
           {notes.length === 0 && !draft && (
             <EmptyDay
@@ -237,6 +247,7 @@ function Block({
   const tint = tagColor(note.color, c) ?? c.accent;
   const done = note.is_completed;
   const alarm = note.reminder_minutes != null && !done;
+  const sub = checklistProgress(body);
 
   return (
     <Animated.View
@@ -265,11 +276,10 @@ function Block({
       >
         <Checkbox checked={done} onPress={() => toggleNote(note.id)} tint={tagColor(note.color, c)} size={16} />
         <View style={styles.blockText}>
-          <Text numberOfLines={1} style={[Type.sub, { color: done ? c.textFaint : c.text }, done && styles.struck]}>
-            {title || body}
-          </Text>
+          <StrikeText text={title || body} done={done} style={Type.sub} color={c.text} lineColor={c.textFaint} />
           <Text numberOfLines={1} style={[Type.micro, { color: done ? c.textFaint : tint }]}>
             {note.time_slot}
+            {sub.total > 0 ? `  ·  ${sub.done}/${sub.total}` : ''}
             {alarm ? `  ·  ${reminderLabel(note.reminder_minutes, true)}` : ''}
           </Text>
         </View>

@@ -10,6 +10,7 @@ import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-re
 
 import { NOTE_TAG_KEYS, NoteTags, Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
+import { joinChecklist, splitChecklist, type ChecklistItem } from '../services/checklist';
 import { joinNote, normalizeTime, parseNote, splitNote } from '../services/notes';
 import { remindersSupported, requestReminderPermission } from '../services/reminders';
 import { addDays, todayISO, type ISODate } from '../services/calendar';
@@ -45,7 +46,11 @@ export default function NoteEditor({
   const { saveNote, deleteNote, toggleNote, moveNote } = useAgenda();
   const initial = note ? splitNote(note.text_content) : { title: '', body: '' };
   const [title, setTitle] = useState(initial.title);
-  const [body, setBody] = useState(initial.body);
+  const initialBody = splitChecklist(initial.body);
+  const [body, setBody] = useState(initialBody.text);
+  const [items, setItems] = useState<ChecklistItem[]>(initialBody.items);
+  const [newItem, setNewItem] = useState('');
+  const itemRef = useRef<TextInput>(null);
   const [time, setTime] = useState(note?.time_slot ?? initialTime ?? '');
   const [color, setColor] = useState<string | null>(note?.color ?? null);
   const [timeError, setTimeError] = useState(false);
@@ -56,7 +61,7 @@ export default function NoteEditor({
   const [alarmHint, setAlarmHint] = useState<string | null>(null);
   const bodyRef = useRef<TextInput>(null);
   const isNew = !note;
-  const canSave = (title.trim() || body.trim()).length > 0;
+  const canSave = Boolean(title.trim() || body.trim() || items.length > 0 || newItem.trim());
 
   const save = async () => {
     if (!canSave) {
@@ -79,10 +84,11 @@ export default function NoteEditor({
       setAlarmHint('Alarm için saat gir');
       return;
     }
+    const all = newItem.trim() ? [...items, { done: false, text: newItem.trim() }] : items;
     await saveNote({
       id: note?.id,
       date: note ? undefined : newDate,
-      text: joinNote(ttl, body),
+      text: joinNote(ttl, joinChecklist(body, all)),
       time: t,
       color,
       reminder,
@@ -156,6 +162,60 @@ export default function NoteEditor({
         style={[Type.sub, styles.body, webNoOutline, { color: c.text }]}
         accessibilityLabel="Not açıklaması"
       />
+
+      <View style={styles.items}>
+        {items.map((it, i) => (
+          <View key={i} style={styles.itemRow}>
+            <Checkbox
+              checked={it.done}
+              size={16}
+              tint={tint}
+              onPress={() => setItems((l) => l.map((x, j) => (j === i ? { ...x, done: !x.done } : x)))}
+            />
+            <TextInput
+              value={it.text}
+              onChangeText={(v) => setItems((l) => l.map((x, j) => (j === i ? { ...x, text: v } : x)))}
+              style={[
+                Type.sub,
+                styles.itemInput,
+                webNoOutline,
+                { color: it.done ? c.textFaint : c.text },
+                it.done && styles.struck,
+              ]}
+              accessibilityLabel={`Alt görev ${i + 1}`}
+            />
+            <Pressable
+              onPress={() => setItems((l) => l.filter((_, j) => j !== i))}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`Alt görev ${i + 1} sil`}
+            >
+              <Ionicons name="close" size={16} color={c.textFaint} />
+            </Pressable>
+          </View>
+        ))}
+        <View style={styles.itemRow}>
+          <Ionicons name="add" size={18} color={c.textFaint} style={styles.itemAdd} />
+          <TextInput
+            ref={itemRef}
+            value={newItem}
+            onChangeText={setNewItem}
+            onKeyPress={onKey}
+            onSubmitEditing={() => {
+              if (!newItem.trim()) return;
+              setItems((l) => [...l, { done: false, text: newItem.trim() }]);
+              setNewItem('');
+              itemRef.current?.focus();
+            }}
+            submitBehavior="submit"
+            returnKeyType="done"
+            placeholder="Alt görev ekle"
+            placeholderTextColor={c.textFaint}
+            style={[Type.sub, styles.itemInput, webNoOutline, { color: c.text }]}
+            accessibilityLabel="Alt görev ekle"
+          />
+        </View>
+      </View>
 
       <View style={styles.footer}>
         <View style={styles.chips}>
@@ -353,6 +413,11 @@ export default function NoteEditor({
 }
 
 const styles = StyleSheet.create({
+  items: { paddingHorizontal: Space.lg, paddingBottom: Space.sm, gap: 2 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: Space.sm, minHeight: 34 },
+  itemInput: { flex: 1, minWidth: 0, paddingVertical: 4 },
+  itemAdd: { width: 16, textAlign: 'center' },
+  struck: { textDecorationLine: 'line-through' },
   card: {
     borderRadius: Radius.lg,
     borderWidth: StyleSheet.hairlineWidth,

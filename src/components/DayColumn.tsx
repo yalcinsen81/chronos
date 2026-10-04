@@ -3,14 +3,24 @@
 // Nota dokununca ayrıntı kartı (saat, alarm, renk, açıklama) açılır.
 
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeInDown,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
 import { formatWeekday, fromISODate, todayISO, TR_MONTHS, type ISODate } from '../services/calendar';
-import { parseNote, splitNote } from '../services/notes';
+import { checklistProgress } from '../services/checklist';
+import { parseSmart } from '../services/naturalDate';
+import { splitNote } from '../services/notes';
 import { reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
 import Bell from './Bell';
@@ -19,6 +29,9 @@ import EmptyDay from './EmptyDay';
 import { webNoOutline } from './webStyles';
 
 export const LINE_HEIGHT = 46;
+const COMPACT_LINE_HEIGHT = 38;
+/** Ayarlardaki satır sıklığına göre satır yüksekliği */
+export const lineHeightFor = (density: 'rahat' | 'siki') => (density === 'siki' ? COMPACT_LINE_HEIGHT : LINE_HEIGHT);
 const MIN_LINES = 12; // sütun boşken de defter sayfası gibi çizgili görünsün
 
 export default function DayColumn({
@@ -33,7 +46,8 @@ export default function DayColumn({
   onOpen: (note: EntryWithDate, alarm?: boolean) => void;
 }) {
   const c = usePalette();
-  const { saveNote, showDay, carryOver } = useAgenda();
+  const { saveNote, showDay, carryOver, selectDate, density } = useAgenda();
+  const lh = lineHeightFor(density);
   const [draft, setDraft] = useState('');
   const inputRef = useRef<TextInput>(null);
   const today = todayISO();
@@ -47,9 +61,11 @@ export default function DayColumn({
     const value = draft.trim();
     if (!value) return;
     setDraft('');
-    const { text, time } = parseNote(value);
-    await saveNote({ text, time, color: null, reminder: null, date });
-    inputRef.current?.focus();
+    // "yarın 15:00 diş hekimi" gibi yazılanlar gün ve saati kendisi bulur
+    const { text, time, date: when } = parseSmart(value);
+    await saveNote({ text, time, color: null, reminder: null, date: when ?? date });
+    if (when && when !== date) selectDate(when);
+    else inputRef.current?.focus();
   };
 
   return (
@@ -112,11 +128,11 @@ export default function DayColumn({
             hint={isPast ? 'Bu güne not eklenmemiş.' : 'Aşağıdaki satıra dokun, yaz, Enter.'}
           />
         )}
-        {notes.map((n, i) => (
+        {sortOpenFirst(notes).map((n, i) => (
           <TaskLine key={n.id} note={n} index={i} onOpen={(alarm) => onOpen(n, alarm)} />
         ))}
 
-        <View style={[styles.line, { borderBottomColor: c.separator }]}>
+        <View style={[styles.line, { borderBottomColor: c.separator, height: lh }]}>
           <TextInput
             ref={inputRef}
             value={draft}
@@ -126,7 +142,7 @@ export default function DayColumn({
             returnKeyType="done"
             placeholder="+ Not ekle"
             placeholderTextColor={c.textFaint}
-            style={[Type.sub, styles.input, webNoOutline, { color: c.text }]}
+            style={[Type.sub, styles.input, webNoOutline, { color: c.text, height: lh }]}
             accessibilityLabel={`${formatWeekday(date)} için not ekle`}
           />
           {draft.trim().length > 0 && (
@@ -140,12 +156,52 @@ export default function DayColumn({
           <Pressable
             key={i}
             onPress={() => inputRef.current?.focus()}
-            style={[styles.line, { borderBottomColor: c.separator }]}
+            style={[styles.line, { borderBottomColor: c.separator, height: lh }]}
             accessibilityElementsHidden
             importantForAccessibility="no"
           />
         ))}
       </ScrollView>
+    </View>
+  );
+}
+
+/** Tamamlananlar listenin sonuna iner (kararlı sıralama: saat sırası korunur) */
+export function sortOpenFirst(notes: EntryWithDate[]): EntryWithDate[] {
+  return [...notes].sort((a, b) => Number(a.is_completed) - Number(b.is_completed));
+}
+
+/** Tamamlanınca çizgi soldan sağa çekilir, yazı soluklaşır */
+export function StrikeText({
+  text,
+  done,
+  style,
+  color,
+  lineColor,
+}: {
+  text: string;
+  done: boolean;
+  style: object | object[];
+  color: string;
+  lineColor: string;
+}) {
+  const [w, setW] = useState(0);
+  const p = useSharedValue(done ? 1 : 0);
+  useEffect(() => {
+    p.value = withTiming(done ? 1 : 0, { duration: 280, easing: Easing.out(Easing.cubic) });
+  }, [done, p]);
+  const line = useAnimatedStyle(() => ({ width: w * p.value }));
+  const fade = useAnimatedStyle(() => ({ opacity: 1 - 0.45 * p.value }));
+  return (
+    <View style={styles.strikeWrap}>
+      <Animated.Text
+        numberOfLines={1}
+        onLayout={(e) => setW(e.nativeEvent.layout.width)}
+        style={[style, styles.strikeText, { color }, fade]}
+      >
+        {text}
+      </Animated.Text>
+      <Animated.View pointerEvents="none" style={[styles.strikeLine, { backgroundColor: lineColor }, line]} />
     </View>
   );
 }
@@ -160,17 +216,20 @@ export function TaskLine({
   index?: number; // sıra: satırlar sırayla (kademeli) belirir
 }) {
   const c = usePalette();
-  const { toggleNote, openMenu } = useAgenda();
+  const { toggleNote, openMenu, density } = useAgenda();
   const { title, body } = splitNote(note.text_content);
   const tint = tagColor(note.color, c);
   const done = note.is_completed;
   const alarm = note.reminder_minutes != null && !done;
+  const sub = checklistProgress(body);
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(240).delay(Math.min(index, 8) * 40)}
+      entering={FadeInDown.delay(Math.min(index, 8) * 40)
+        .springify()
+        .damping(18)}
       exiting={FadeOut.duration(120)}
-      layout={LinearTransition.duration(180)}
+      layout={LinearTransition.springify().damping(20)}
     >
       <Pressable
         onPress={() => onOpen()}
@@ -179,7 +238,7 @@ export function TaskLine({
         style={({ pressed }) => [
           styles.line,
           styles.task,
-          { borderBottomColor: c.separator },
+          { borderBottomColor: c.separator, height: lineHeightFor(density) },
           tint && { backgroundColor: tint + (c.scheme === 'dark' ? '2E' : '1F') },
           pressed && { opacity: 0.6 },
         ]}
@@ -191,12 +250,15 @@ export function TaskLine({
             {note.time_slot}
           </Text>
         )}
-        <Text
-          numberOfLines={1}
-          style={[Type.sub, styles.text, { color: done ? c.textFaint : c.text }, done && styles.struck]}
-        >
-          {title || body}
-        </Text>
+        <StrikeText text={title || body} done={done} style={Type.sub} color={c.text} lineColor={c.textFaint} />
+        {sub.total > 0 && (
+          <Text
+            style={[Type.micro, { color: c.textFaint }]}
+            accessibilityLabel={`${sub.done} / ${sub.total} alt görev`}
+          >
+            {sub.done}/{sub.total}
+          </Text>
+        )}
         {Boolean(title && body) && <Ionicons name="document-text-outline" size={14} color={c.textFaint} />}
         {note.repeat && <Ionicons name="repeat" size={14} color={c.textFaint} accessibilityLabel="Tekrarlanıyor" />}
         {/* Saati olan notta zil her zaman görünür: tek dokunuşla alarm kurulur */}
@@ -256,5 +318,8 @@ const styles = StyleSheet.create({
   time: { fontVariant: ['tabular-nums'], fontWeight: '700' },
   text: { flex: 1, minWidth: 0 },
   struck: { textDecorationLine: 'line-through' },
+  strikeText: { alignSelf: 'flex-start', maxWidth: '100%' },
+  strikeWrap: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  strikeLine: { position: 'absolute', left: 0, top: '52%', height: 1.5, borderRadius: 1 },
   bell: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
 });

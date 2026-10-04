@@ -27,3 +27,11 @@ export interface AlarmAction {
 export function listenAlarmActions(_handler: (a: AlarmAction) => void): () => void {
   return () => undefined;
 }
+
+export interface DaySummary {
+  date: string;
+  count: number;
+  titles: string[];
+}
+
+export async function scheduleDailySummaries(_hour: number | null, _days: DaySummary[]): Promise<void> {}

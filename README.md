@@ -46,6 +46,15 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
   sorulur. Bildirimde **"10 dk ertele"** ve **"Tamamla"** düğmeleri çıkar (düğmeye basınca uygulama açılır ve işlemi yapar);
   bildirime dokunmak o günün görünümünü açar. Tekrarlayan notların alarmları yalnızca 21 gün öncesinden kurulur
   (iOS en çok 64 bekleyen bildirim tutar); uygulamayı en az üç haftada bir açman yeterli. Tarayıcı önizlemesinde alarm çalmaz.
+- **Doğal dille ekleme:** satıra `yarın 15:00 diş hekimi`, `cuma toplantı 10.30`, `3 gün sonra rapor`, `haftaya salı sunum`
+  ya da `15 Ekim doğum günü` yaz; gün ve saati kendisi bulur (not o güne eklenir, görünüm oraya geçer). Gün adı ya da bugün/yarın
+  yalnızca metnin başında ya da sonunda aranır.
+- **Alt görevler:** kartta *Alt görev ekle* ile küçük maddeler; satırda `2/4` olarak görünür. Maddeler açıklamada `[ ] madde`
+  satırları olarak saklanır.
+- **Tamamlananlar sona iner ve soluklaşır;** tamamlayınca yazının üstünden çizgi çekilir.
+- **Günlük özet:** Ayarlar'dan 07:00, 08:00 ya da 09:00 seç; o saatte "Bugün 4 notun var" bildirimi gelir (önümüzdeki 7 gün, notlar
+  değiştikçe güncellenir; iOS 64 bildirim sınırı için yalnızca 7 gün kurulur). Tarayıcıda çalmaz.
+- **Satır sıklığı:** Ayarlar'dan *Rahat* ya da *Sıkı*.
 - **Uzun bas menüsü:** nota (satır ya da gün çizelgesindeki blok) uzun basınca *Düzenle, Tamamla/Geri al, Bugüne taşı, Yarına taşı, Sil*.
 - **Telefonda +:** sağ alttaki turuncu düğme seçili güne yeni not açar; kart alttan yükselir, tutamaçtan aşağı çekince kapanır.
 - **Sade ilerleme:** her günün başlığında tamamlanan not sayısı (`2/5`) görünür.

@@ -14,10 +14,15 @@ import {
   cancelReminder,
   cancelSnooze,
   listenAlarmActions,
+  requestReminderPermission,
+  scheduleDailySummaries,
   scheduleReminder,
   snoozeReminder,
 } from '../services/reminders';
 import { materializeSeries } from '../services/series';
+import { splitNote } from '../services/notes';
+
+export type Density = 'rahat' | 'siki';
 
 export interface NoteInput {
   /** Verilmezse yeni not oluşturulur */
@@ -70,6 +75,12 @@ interface AgendaState {
   /** Seçili vurgu rengi (ayarlardan) */
   accent: AccentKey;
   setAccent: (key: AccentKey) => Promise<void>;
+  /** Satır sıklığı (ayarlardan) */
+  density: Density;
+  setDensity: (d: Density) => Promise<void>;
+  /** Günlük özet bildirim saati; null kapalı */
+  summaryHour: number | null;
+  setSummaryHour: (hour: number | null) => Promise<boolean>;
   /** Tüm notları yedek metni (JSON) olarak verir */
   exportBackup: () => Promise<string>;
   /** Yedek metnini içe aktarır; var olan notlara dokunmaz. Eklenen not sayısını ya da hata iletisini döner. */
@@ -94,6 +105,8 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   const [revision, setRevision] = useState(0);
   const [view, setView] = useState<AgendaView>('week');
   const [accent, setAccentState] = useState<AccentKey>('turuncu');
+  const [density, setDensityState] = useState<Density>('rahat');
+  const [summaryHour, setSummaryHourState] = useState<number | null>(null);
   const [menuNote, setMenuNote] = useState<EntryWithDate | null>(null);
   const openMenu = useCallback((n: EntryWithDate) => {
     haptics.tap();
@@ -130,6 +143,11 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
         setAccentKey(savedAccent);
         setAccentState(savedAccent);
       }
+      const savedDensity = await repo.getSetting('density');
+      if (savedDensity === 'siki' || savedDensity === 'rahat') setDensityState(savedDensity);
+      const rawSummary = await repo.getSetting('summaryHour');
+      const savedSummary = rawSummary ? Number(rawSummary) : NaN;
+      if (Number.isInteger(savedSummary) && savedSummary >= 0 && savedSummary <= 23) setSummaryHourState(savedSummary);
       if (cancelled) return;
       setNotebookId(nb.id);
       setReady(true);
@@ -275,6 +293,45 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     [repo],
   );
 
+  const setDensity = useCallback(
+    async (d: Density) => {
+      setDensityState(d);
+      haptics.select();
+      await repo.setSetting('density', d);
+    },
+    [repo],
+  );
+
+  /** Özeti açar/kapatır; açarken bildirim izni istenir. İzin yoksa false döner (özet yine de kaydedilir). */
+  const setSummaryHour = useCallback(
+    async (hour: number | null) => {
+      setSummaryHourState(hour);
+      haptics.select();
+      await repo.setSetting('summaryHour', hour == null ? '' : String(hour));
+      return hour == null ? true : requestReminderPermission();
+    },
+    [repo],
+  );
+
+  // Günlük özet: notlar her değiştiğinde önümüzdeki 7 günün sayıları güncellenir
+  useEffect(() => {
+    if (!notebookId || !ready) return;
+    (async () => {
+      const today = todayISO();
+      const list = await repo.listEntriesBetween(notebookId, today, addDays(today, 6));
+      const days = Array.from({ length: 7 }, (_, i) => {
+        const date = addDays(today, i);
+        const open = list.filter((e) => e.date === date && !e.is_completed);
+        return {
+          date,
+          count: open.length,
+          titles: open.map((e) => splitNote(e.text_content).title || e.text_content).slice(0, 3),
+        };
+      });
+      await scheduleDailySummaries(summaryHour, days);
+    })().catch((e) => console.warn('Günlük özet kurulamadı', e));
+  }, [repo, notebookId, ready, revision, summaryHour]);
+
   const listAll = useCallback(async () => (notebookId ? repo.listAllEntries(notebookId) : []), [repo, notebookId]);
 
   const exportBackup = useCallback(async () => JSON.stringify(buildBackup(await listAll()), null, 1), [listAll]);
@@ -324,6 +381,10 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     revision,
     accent,
     setAccent,
+    density,
+    setDensity,
+    summaryHour,
+    setSummaryHour,
     exportBackup,
     importBackup,
     listAll,

@@ -13,10 +13,12 @@ import { webNoOutline } from './webStyles';
 
 export default function SettingsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const c = usePalette();
-  const { accent, setAccent, exportBackup, importBackup } = useAgenda();
+  const { accent, setAccent, exportBackup, importBackup, density, setDensity, summaryHour, setSummaryHour } =
+    useAgenda();
   const [backupText, setBackupText] = useState('');
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restoreText, setRestoreText] = useState('');
+  const [summaryWarn, setSummaryWarn] = useState<string | null>(null);
   const [status, setStatus] = useState<{ text: string; error?: boolean } | null>(null);
 
   const copy = async () => {
@@ -98,6 +100,52 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
                 );
               })}
             </View>
+
+            <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>SATIR SIKLIĞI</Text>
+            <View style={styles.btnRow}>
+              <Pill
+                icon="resize-outline"
+                label="Rahat"
+                active={density === 'rahat'}
+                onPress={() => setDensity('rahat')}
+              />
+              <Pill
+                icon="reorder-three-outline"
+                label="Sıkı"
+                active={density === 'siki'}
+                onPress={() => setDensity('siki')}
+              />
+            </View>
+
+            <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>GÜNLÜK ÖZET</Text>
+            <Text style={[Type.caption, styles.note, { color: c.textMuted }]}>
+              Seçtiğin saatte "Bugün 4 notun var" bildirimi gelir (notu olmayan güne gelmez).
+            </Text>
+            <View style={styles.btnRow}>
+              <Pill
+                icon="notifications-off-outline"
+                label="Kapalı"
+                active={summaryHour == null}
+                onPress={() => setSummaryHour(null)}
+              />
+              {[7, 8, 9].map((h) => (
+                <Pill
+                  key={h}
+                  icon="notifications-outline"
+                  label={`${String(h).padStart(2, '0')}:00`}
+                  active={summaryHour === h}
+                  onPress={async () => {
+                    const granted = await setSummaryHour(h);
+                    setSummaryWarn(
+                      granted
+                        ? null
+                        : "Bildirim izni kapalı (tarayıcıda hiç çalmaz). Telefonda Ayarlar > Bildirimler'den aç.",
+                    );
+                  }}
+                />
+              ))}
+            </View>
+            {summaryWarn && <Text style={[Type.caption, styles.status, { color: c.danger }]}>{summaryWarn}</Text>}
 
             <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>YEDEK</Text>
             <Text style={[Type.caption, styles.note, { color: c.textMuted }]}>

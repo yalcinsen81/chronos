@@ -72,6 +72,8 @@ src/
     çünkü telefonda yatay kaydırma gün sayfalarına aittir. Sürükle-bırak ve ana ekran widget'ı yapılmadı (Expo Go'da yok / doğrulanamadı).
 15. **Sade kal, süsleme ekleme:** kullanıcı halka, konfeti, ışık lekeleri ve çizimleri "fazla süslü" bulup kaldırttı (2026-10-04). Yeni görsel süs eklemeden önce sor.
 16. **Kademeli giriş:** `TaskLine` satırları `index` ile sırayla belirir (FadeInDown + gecikme, en çok 8 adım); gün şeridinde seçili gün yaylanarak büyür.
+17. **Doğal dil ve alt görevler saf servislerdir** (`naturalDate.ts`, `checklist.ts`; testli). Alt görevler şemayı değiştirmez: açıklamada
+    `[ ] / [x]` satırları. Günlük özet bildirimleri `daily-<tarih>` kimliğiyle kurulur ve her değişiklikte baştan kurulur (`scheduleDailySummaries`).
 
 ## Komutlar
 

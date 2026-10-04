@@ -149,3 +149,52 @@ export function listenAlarmActions(handler: (a: AlarmAction) => void): () => voi
   const sub = Notifications.addNotificationResponseReceivedListener(handle);
   return () => sub.remove();
 }
+
+const SUMMARY_PREFIX = 'daily-';
+const SUMMARY_CHANNEL = 'summary';
+const SUMMARY_DAYS = 7;
+
+export interface DaySummary {
+  date: string; // YYYY-MM-DD
+  count: number; // tamamlanmamış not sayısı
+  titles: string[]; // ilk birkaç not başlığı
+}
+
+/**
+ * Günlük özet bildirimi: seçilen saatte "Bugün N notun var". Yerel bildirim içeriği sonradan değişmediği için
+ * önümüzdeki 7 gün, notlar her değiştiğinde ve uygulama her açıldığında güncel sayılarla yeniden kurulur.
+ * hour null ise özetler kapatılır. Notu olmayan güne bildirim kurulmaz.
+ */
+export async function scheduleDailySummaries(hour: number | null, days: DaySummary[]): Promise<void> {
+  const pending = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+  for (const n of pending) {
+    if (n.identifier.startsWith(SUMMARY_PREFIX)) {
+      await Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => undefined);
+    }
+  }
+  if (hour == null) return;
+  await setup();
+  const perm = await Notifications.getPermissionsAsync();
+  if (!perm.granted) return;
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(SUMMARY_CHANNEL, {
+      name: 'Günlük özet',
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  }
+  for (const d of days.slice(0, SUMMARY_DAYS)) {
+    if (d.count === 0) continue;
+    const [y, m, day] = d.date.split('-').map(Number);
+    const fire = new Date(y, m - 1, day, hour, 0, 0);
+    if (fire.getTime() <= Date.now()) continue;
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${SUMMARY_PREFIX}${d.date}`,
+      content: {
+        title: `Bugün ${d.count} notun var`,
+        body: d.titles.slice(0, 3).join(' · '),
+        data: { date: d.date },
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire, channelId: SUMMARY_CHANNEL },
+    });
+  }
+}
