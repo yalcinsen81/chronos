@@ -57,11 +57,11 @@ export function EmptyNotes({ filtered, onWrite }: { filtered: boolean; onWrite: 
         <Ionicons name={filtered ? 'filter-outline' : 'create-outline'} size={26} color={c.accent} />
       </View>
       <Text style={[styles.emptyTitle, { color: c.text }]}>
-        {filtered ? 'Bu filtrede not yok' : 'Gün boş, ilk notu yaz'}
+        {filtered ? 'Bu filtrede not yok' : 'Bu gün için henüz not yok'}
       </Text>
       {!filtered && (
         <Text style={[styles.emptyHint, { color: c.textMuted }]}>
-          Başına saat yazarsan sıralanır: "14:30 Diş hekimi"
+          Yukarıdaki alana yaz, "Ekle"ye dokun.
         </Text>
       )}
     </Pressable>

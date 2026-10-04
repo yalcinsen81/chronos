@@ -20,4 +20,8 @@ describe('parseNote', () => {
     });
     expect(parseNote('12:00')).toEqual({ text: '12:00', time: null });
   });
+
+  it('çok satırlı notta baştaki saati ayırır, satırları korur', () => {
+    expect(parseNote('14:30 Toplantı\n- bütçe\n- takvim')).toEqual({ text: 'Toplantı\n- bütçe\n- takvim', time: '14:30' });
+  });
 });

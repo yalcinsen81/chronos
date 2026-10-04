@@ -8,6 +8,7 @@ import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-re
 import { cardShadow, Fonts, NOTE_TAG_KEYS, Radius, Space, tagColor, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
 import { useAgenda } from '../state/AgendaContext';
+import { webNoOutline } from './webStyles';
 
 /** Düzenleme alanına geri yazarken saat başa eklenir: "14:30 Diş hekimi" */
 const toDraft = (n: EntryWithDate) => (n.time_slot ? `${n.time_slot} ${n.text_content}` : n.text_content);
@@ -69,12 +70,11 @@ export default function NoteCard({
       {editing ? (
         <TextInput
           autoFocus
+          multiline
           value={draft}
           onChangeText={setDraft}
-          onSubmitEditing={commit}
           onBlur={commit}
-          submitBehavior="blurAndSubmit"
-          style={[styles.input, { color: c.text, borderColor: c.accent }]}
+          style={[styles.input, webNoOutline, { color: c.text, borderColor: c.accent }]}
         />
       ) : (
         <Pressable onPress={onEdit} style={styles.body} accessibilityHint="Düzenlemek için dokun">
@@ -135,14 +135,15 @@ const styles = StyleSheet.create({
   stripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   check: { width: 24, height: 24, borderRadius: 8, borderWidth: 1.8, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, paddingVertical: Space.md, gap: 3 },
-  text: { fontFamily: Fonts.medium, fontSize: 15, lineHeight: 21 },
+  text: { fontFamily: Fonts.medium, fontSize: 16, lineHeight: 23 },
   struck: { textDecorationLine: 'line-through' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   time: { fontFamily: Fonts.semibold, fontSize: 12, fontVariant: ['tabular-nums'] },
   input: {
     flex: 1,
     fontFamily: Fonts.medium,
-    fontSize: 15,
+    fontSize: 16,
+    lineHeight: 23,
     paddingVertical: Space.sm,
     marginVertical: Space.sm,
     borderBottomWidth: 1.5,

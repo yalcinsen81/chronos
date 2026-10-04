@@ -1,7 +1,7 @@
 # Chronos — Mimari Kurallar
 
 Şık ve sade ajanda paneli: selam başlığı, gradyanlı gün özeti, hafta şeridi / açılır ay takvimi, renk
-etiketli not kartları ve altta sabit yazma çubuğu. Bir güne dokun, hemen yaz. Expo SDK 57 + React Native + TypeScript. Expo Go'da çalışır.
+etiketli not kartları ve takvimin altında geniş, çok satırlı "Yeni not" kartı. Bir güne dokun, hemen yaz. Expo SDK 57 + React Native + TypeScript. Expo Go'da çalışır.
 
 > 2026-10-04: Kullanıcı ilk "fiziksel defter" tasarımını (deri kapak, Skia kağıt, el yazısı, sayfa kıvırma,
 > sesli not) eski bulup sade bir tasarım istedi. O sürüm git geçmişinde `d5a5458` commit'indedir.
@@ -27,7 +27,7 @@ App.tsx                 Kök: veri tabanı sürücüsü, AgendaProvider, yüklen
 index.web.ts            Web girişi: sql.js yüklendikten sonra App'i kaydeder
 src/
   components/           AgendaScreen (düzen), SummaryCard + ProgressRing, CalendarCard (hafta/ay),
-                        NotesSection (başlık, filtre, boş durum), NoteCard, Composer (renk + yazma)
+                        NotesSection (başlık, filtre, boş durum), NoteCard, Composer (çok satırlı "Yeni not" kartı)
   constants/theme.ts    Açık/koyu palet, not renk etiketleri, yazı tipleri, ölçüler, usePalette()
   state/AgendaContext   Seçili gün, o günün notları, ekle/düzenle/tamamla/sil
   services/             calendar.ts (tarih yardımcıları), notes.ts (nottan saat ayıklama), haptics.ts

@@ -20,10 +20,10 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
 
 ## Kullanım
 
-- Takvimde bir güne dokun; alttaki alana notunu yaz ve gönder.
+- Takvimde bir güne dokun; "Yeni not" kartındaki geniş alana yaz (çok satır olabilir) ve "Ekle"ye dokun. Bilgisayarda Ctrl/Cmd + Enter da ekler.
 - Notun başına veya sonuna saat yazarsan saat etiketi olur ve gün içinde sıralanır: `14:30 Diş hekimi`.
 - Kutucuğa dokununca not tamamlanır, metne dokununca düzenlenir, çöp kutusu ile silinir.
-- Yazma çubuğundaki renkli daireden notun rengini seç; karttaki renkli noktaya dokunarak sonradan değiştir.
+- "Ekle" düğmesinin yanındaki renklerden notun rengini seç; not kartındaki renkli noktaya dokunarak sonradan değiştir.
 - Üstteki kart günün özetini gösterir: not sayısı, tamamlanma yüzdesi ve sıradaki saatli not.
 - Takvim hafta şeridi olarak açılır; takvim simgesiyle tüm ayı aç. Notu olan günlerin altında nokta görünür.
 - "Tümü / Yapılacak / Bitti" sekmeleriyle notları süz. Başka bir gündeyken sağ üstteki düğme bugüne döner.

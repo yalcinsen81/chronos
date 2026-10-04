@@ -1,5 +1,5 @@
-// Ana panel. Telefonda: selam başlığı, özet kartı, takvim, notlar tek kaydırmada; yazma çubuğu altta sabit.
-// Tablette: solda özet + aylık takvim, sağda notlar ve yazma çubuğu.
+// Ana panel. Telefonda: selam başlığı, özet kartı, takvim, yeni not kartı ve notlar tek kaydırmada.
+// Tablette: solda özet + aylık takvim, sağda yeni not kartı ve notlar.
 
 import { useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
@@ -79,6 +79,7 @@ export default function AgendaScreen() {
       ListHeaderComponent={
         <View style={styles.listHeader}>
           {header}
+          <Composer ref={composerRef} />
           <NotesHeader filter={filter} onFilter={setFilter} counts={counts} />
         </View>
       }
@@ -102,12 +103,7 @@ export default function AgendaScreen() {
               <SummaryCard />
               <CalendarCard alwaysMonth />
             </ScrollView>
-            <View style={styles.main}>
-              {list()}
-              <View style={styles.composer}>
-                <Composer ref={composerRef} />
-              </View>
-            </View>
+            <View style={styles.main}>{list()}</View>
           </View>
         ) : (
           <View style={styles.root}>
@@ -118,9 +114,6 @@ export default function AgendaScreen() {
                 <CalendarCard />
               </>,
             )}
-            <View style={styles.composer}>
-              <Composer ref={composerRef} />
-            </View>
           </View>
         )}
       </KeyboardAvoidingView>
@@ -134,10 +127,9 @@ const styles = StyleSheet.create({
   topDate: { fontFamily: Fonts.medium, fontSize: 13 },
   greet: { fontFamily: Fonts.extrabold, fontSize: 26, letterSpacing: -0.6 },
   listHeader: { gap: Space.lg, paddingBottom: Space.md },
-  listContent: { paddingHorizontal: Space.lg, paddingBottom: Space.xl },
-  composer: { paddingHorizontal: Space.lg, paddingTop: Space.sm, paddingBottom: Space.md },
+  listContent: { paddingHorizontal: Space.lg, paddingBottom: 48 },
   wide: { flex: 1, flexDirection: 'row', paddingHorizontal: Space.md, gap: Space.md },
   side: { width: 400, flexGrow: 0 },
   sideContent: { gap: Space.lg, paddingHorizontal: Space.sm, paddingBottom: Space.xl },
-  main: { flex: 1, maxWidth: 760, paddingTop: Space.xl + Space.lg },
+  main: { flex: 1, maxWidth: 760, paddingTop: Space.lg },
 });
