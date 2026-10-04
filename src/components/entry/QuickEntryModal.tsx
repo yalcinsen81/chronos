@@ -1,7 +1,7 @@
 // Hızlı Giriş Post-it'i: kalıcı "+" butonundan açılır.
 // Yazarken metin canlı olarak ayrıştırılır ("yarın 15:00 ..." → tarih/saat önerisi).
 // Kullanıcı tarih çipiyle elle seçim yaparsa ayrıştırılan tarihin önüne geçer.
-// Tarih seçilmezse ve metinde tarih yoksa giriş Havuz'a düşer.
+// Metinde tarih yoksa giriş açık olan güne yazılır (takvimden açıldıysa), yoksa Havuz'a düşer.
 
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -18,11 +18,11 @@ type DateChoice = { kind: 'auto' } | { kind: 'inbox' } | { kind: 'date'; iso: IS
 export interface QuickEntryModalProps {
   visible: boolean;
   onClose: () => void;
-  /** Takvimden açıldığında önceden seçili gün */
-  initialDate?: ISODate | null;
+  /** Takvimden açıldığında metinde tarih yoksa kullanılacak gün */
+  fallbackDate?: ISODate | null;
 }
 
-export default function QuickEntryModal({ visible, onClose, initialDate }: QuickEntryModalProps) {
+export default function QuickEntryModal({ visible, onClose, fallbackDate }: QuickEntryModalProps) {
   const { addEntry, goTo } = useAgenda();
   const [text, setText] = useState('');
   const [choice, setChoice] = useState<DateChoice>({ kind: 'auto' });
@@ -33,19 +33,21 @@ export default function QuickEntryModal({ visible, onClose, initialDate }: Quick
     if (visible) {
       setText('');
       setPickerOpen(false);
-      setChoice(initialDate ? { kind: 'date', iso: initialDate } : { kind: 'auto' });
+      setChoice({ kind: 'auto' });
       lift.value = 40;
       lift.value = withSpring(0, { damping: 12, stiffness: 160 });
     }
-  }, [visible, initialDate, lift]);
+  }, [visible, lift]);
 
   const parsed = useMemo(() => parseEntry(text), [text]);
 
   const target = useMemo(() => {
     if (choice.kind === 'inbox') return { date: null, time: null };
     if (choice.kind === 'date') return { date: choice.iso, time: parsed.time };
-    return { date: parsed.date, time: parsed.time };
-  }, [choice, parsed]);
+    // Açık gün ifadesi > açık olan sayfanın günü > (yalnızca saat varsa) bugün > Havuz
+    if (parsed.dateExplicit) return { date: parsed.date, time: parsed.time };
+    return { date: fallbackDate ?? parsed.date, time: parsed.time };
+  }, [choice, parsed, fallbackDate]);
 
   const save = async () => {
     // Tarih ifadesi ayrıştırıldıysa sayfaya yalnızca eylem yazılır

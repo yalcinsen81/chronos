@@ -8,7 +8,7 @@
 //  Geri  (sol kenardan sağa çekiş):  alt görüntü = bugün (sabit), üstten geri kıvrılan = dün
 
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
-import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import {
   Canvas,
   Fill,
@@ -67,6 +67,8 @@ const PageCurl = forwardRef<PageCurlHandle, PageCurlProps>(function PageCurl({ o
   };
 
   const snapshot = useCallback(async () => {
+    // Web'de görünüm anlık görüntüsü desteklenmez: çevirme animasyonsuz sayfa geçişine düşer
+    if (Platform.OS === 'web') return null;
     try {
       return await makeImageFromView(contentRef);
     } catch {

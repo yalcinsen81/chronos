@@ -224,6 +224,8 @@ export interface ParsedEntry {
   time: string | null;
   /** Tarih/saat ifadeleri çıkarılmış eylem metni */
   action: string;
+  /** Metinde açık bir gün ifadesi var mı (yalnızca saat verildiyse false) */
+  dateExplicit: boolean;
   /** Eşleşen tarih/saat ifadeleri (UI'da vurgulamak için) */
   matches: string[];
 }
@@ -309,11 +311,13 @@ export function parseEntry(text: string, ref: Date = new Date(), lang: ParseLang
   }
 
   // Saat var ama gün yoksa referans gün kabul edilir ("15:00'te toplantı" → bugün)
+  const dateExplicit = date !== null;
   if (time && !date) date = toISODate(ref);
 
   return {
     date,
     time,
+    dateExplicit,
     action: cleanAction(text, used),
     matches: used.map((r) => r.text),
   };

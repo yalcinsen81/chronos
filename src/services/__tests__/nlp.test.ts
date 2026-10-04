@@ -31,6 +31,7 @@ describe('parseEntry (Türkçe)', () => {
     const r = parseEntry('3 elma al', REF);
     expect(r.date).toBeNull();
     expect(r.time).toBeNull();
+    expect(r.dateExplicit).toBe(false);
     expect(r.action).toBe('3 elma al');
   });
 

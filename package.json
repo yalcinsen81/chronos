@@ -1,9 +1,10 @@
 {
   "name": "chronos-paper",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "index",
   "dependencies": {
     "@expo-google-fonts/caveat": "^0.4.2",
+    "@expo/metro-runtime": "~57.0.16",
     "@op-engineering/op-sqlite": "^18.2.5",
     "@shopify/react-native-skia": "2.6.2",
     "chrono-node": "^2.10.2",
@@ -16,10 +17,12 @@
     "expo-status-bar": "~57.0.1",
     "perfect-freehand": "^1.2.3",
     "react": "19.2.3",
+    "react-dom": "^19.2.3",
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
+    "react-native-web": "^0.21.3",
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
@@ -28,6 +31,7 @@
     "@types/react": "~19.2.2",
     "jest": "^29.7.0",
     "jest-expo": "~57.0.5",
+    "sql.js": "^1.14.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -38,7 +42,8 @@
     "typecheck": "tsc --noEmit",
     "prebuild": "expo prebuild",
     "test": "jest",
-    "check:shaders": "node scripts/check-shaders.mjs"
+    "check:shaders": "node scripts/check-shaders.mjs",
+    "web:preview": "node scripts/build-web-preview.mjs"
   },
   "private": true,
   "jest": {

@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   weekend: { color: '#8A6A5A' },
   dots: { flexDirection: 'row', gap: 3, marginTop: 2, paddingLeft: 4 },
   dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: InkColors.midnight, opacity: 0.8 },
-  tabs: { width: 30, paddingTop: 50, paddingBottom: 110, justifyContent: 'space-between' },
+  tabs: { width: 30, paddingTop: 150, paddingBottom: 110, justifyContent: 'space-between' }, // üstte Havuz sekmesine yer bırakılır
   tab: {
     height: 30,
     borderTopRightRadius: 6,

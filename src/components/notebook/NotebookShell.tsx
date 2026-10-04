@@ -100,7 +100,7 @@ export default function NotebookShell() {
 
         <InboxPool />
 
-        <QuickEntryModal visible={quickOpen} onClose={() => setQuickOpen(false)} initialDate={level === 'day' ? date : null} />
+        <QuickEntryModal visible={quickOpen} onClose={() => setQuickOpen(false)} fallbackDate={level === 'day' ? date : null} />
       </View>
     </DragProvider>
   );

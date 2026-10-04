@@ -74,7 +74,7 @@ export default function DaySpread() {
         <RibbonBookmark onPress={goToday} label="Bugüne dön" />
       </View>
 
-      <View style={styles.navRow} pointerEvents="box-none">
+      <View style={[styles.navRow, !wide && styles.navRowNarrow]} pointerEvents="box-none">
         <Pressable onPress={() => curl.current?.turn(-1)} hitSlop={10} style={styles.navBtn}>
           <Text style={styles.navText}>‹ {fromISODate(addDays(date, -1)).getDate()}</Text>
         </Pressable>
@@ -289,6 +289,7 @@ const styles = StyleSheet.create({
   toolbar: { position: 'absolute', bottom: 12, left: 0, right: 0, alignItems: 'center' },
   ribbon: { position: 'absolute', top: 0, right: 64 },
   navRow: { position: 'absolute', top: 18, right: 96, flexDirection: 'row', gap: 14 },
+  navRowNarrow: { top: 62, right: 92 }, // telefonda Plan/Notlar seçicisinin altına
   navBtn: { paddingHorizontal: 8, paddingVertical: 4 },
   navText: { fontFamily: HANDWRITING_FONT, fontSize: 18, color: '#9A8F78' },
 });
