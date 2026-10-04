@@ -2,9 +2,16 @@
 // Telefonda altında 7 günlük şerit vardır (güne dokununca o sütuna kayar).
 
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
-import Animated, { ZoomIn } from 'react-native-reanimated';
-import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+  ZoomIn,
+} from 'react-native-reanimated';
+import { AccessibilityInfo, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Radius, Space, Type, usePalette, WIDE_BREAKPOINT } from '../constants/theme';
 import { addDays, fromISODate, isoWeekNumber, todayISO, TR_MONTHS, TR_WEEKDAYS_SHORT } from '../services/calendar';
@@ -143,6 +150,7 @@ export default function WeekHeader({
                   entering={selected ? ZoomIn.springify().damping(13) : undefined}
                   style={[styles.stripNum, selected && { backgroundColor: c.accent }]}
                 >
+                  {isToday && <TodayPulse color={c.accent} />}
                   <Text
                     style={[
                       Type.bodyBold,
@@ -214,6 +222,25 @@ export default function WeekHeader({
       <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </View>
   );
+}
+
+/** Bugünün dairesinin arkasında hafifçe yanıp sönen halka ("şu an buradayız") */
+function TodayPulse({ color }: { color: string }) {
+  const t = useSharedValue(0);
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isReduceMotionEnabled?.()
+      .then((reduce) => {
+        if (!alive || reduce) return;
+        t.value = withRepeat(withSequence(withTiming(1, { duration: 1100 }), withTiming(0, { duration: 1100 })), -1);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [t]);
+  const style = useAnimatedStyle(() => ({ opacity: 0.1 + 0.4 * t.value, transform: [{ scale: 1 + 0.22 * t.value }] }));
+  return <Animated.View pointerEvents="none" style={[styles.pulse, { backgroundColor: color }, style]} />;
 }
 
 function IconBtn({
@@ -288,6 +315,7 @@ const styles = StyleSheet.create({
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: Space.md, paddingHorizontal: Space.md, height: 44 },
   stripDay: { flex: 1, alignItems: 'center', gap: 4 },
   stripNum: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  pulse: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 17 },
   dot: { width: 4, height: 4, borderRadius: 2 },
   backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Space.lg },
   picker: {
