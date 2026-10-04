@@ -70,6 +70,19 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
 - **⋯ menüsü:** *Ara* (notlarda arama + renk süzgeci) ve *Ayarlar* (renk teması: turuncu, mercan, orman, deniz, mor; yedeği kopyala/paylaş; yedekten geri yükle).
 - Telefonun açık/koyu temasına otomatik uyar.
 
+## PWA olarak kurmak (bilgisayar ve telefon)
+
+`npm run web:preview` çıktısı (`dist-web/`, zip'te `web-onizleme/`) kurulabilir bir PWA'dır: manifest, simgeler ve
+çevrimdışı önbellek (service worker) içerir. Kurulum için klasör **HTTPS** ile barındırılmalıdır (ücretsiz: Vercel, Netlify,
+Cloudflare Pages, GitHub Pages; klasörü olduğu gibi yükle). Sonra:
+
+- **Windows/Mac (Chrome, Edge):** adres çubuğundaki "Yükle" simgesi ya da menü → *Chronos'u yükle*. Adres çubuğu olmayan ayrı pencerede açılır.
+- **iPhone/iPad (Safari):** Paylaş → *Ana Ekrana Ekle*.
+- **Android (Chrome):** menü → *Uygulamayı yükle*.
+
+Sınırlar: veriler her cihazda ve tarayıcıda ayrıdır (cihazlar arası senkron yok; Ayarlar → Yedek ile taşı); web'de alarm
+bildirimi çalmaz (bildirimler yalnızca Expo Go / yerel derlemede).
+
 ## Tarayıcı önizlemesi
 
 ```bash

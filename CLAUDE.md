@@ -78,6 +78,8 @@ src/
     Geri al AgendaContext'tedir (`offerUndo`, anlık görüntü + `repo.importEntries`; 5 sn'lik `UndoBar`). Çoklu seçim `selection/bulk*` ile yapılır
     (`SelectionBar`; uzun bas → "Seç"). Şablonlar `settings.templates` (JSON, `services/templates.ts`), bağlantılar `services/links.ts`.
     Bugün listesi `TodaySheet` (son 60 gün geciken + bugün). Koyu temada "saf siyah" `settings.pureBlack`, `paletteFor(..., black)`.
+19. **PWA:** `scripts/build-web-preview.mjs` manifest, `sw.js` (içerik listesi derleme sırasında üretilir) ve `<head>` etiketlerini ekler;
+    simgeler `public/icons/`. Web verisi localStorage'dadır (cihazlar arası senkron yok), web'de alarm yok.
 
 ## Komutlar
 
