@@ -48,9 +48,8 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
   (iOS en çok 64 bekleyen bildirim tutar); uygulamayı en az üç haftada bir açman yeterli. Tarayıcı önizlemesinde alarm çalmaz.
 - **Uzun bas menüsü:** nota (satır ya da gün çizelgesindeki blok) uzun basınca *Düzenle, Tamamla/Geri al, Bugüne taşı, Yarına taşı, Sil*.
 - **Telefonda +:** sağ alttaki turuncu düğme seçili güne yeni not açar; kart alttan yükselir, tutamaçtan aşağı çekince kapanır.
-- **İlerleme halkası ve konfeti:** her günün başlığında tamamlanan not oranı görünür; hepsini bitirince halka dolar ve konfeti patlar.
-- **Zaman çizgisi:** gün görünümünde şimdiki zaman noktası nabız gibi atar; alarmı bir saat içinde çalacak blok yanıp söner.
-- **Işıltılı üst çubuk:** seçili temanın renkleri üst çubuğun arkasında yavaşça süzülür ([ShaderGradient](https://github.com/ruucm/shadergradient) fikrinden esinli, MIT; WebGL kullanılmaz). Ayarlar'dan kapatılır; "hareketi azalt" açıksa sabit durur.
+- **Sade ilerleme:** her günün başlığında tamamlanan not sayısı (`2/5`) görünür.
+- **Zaman çizgisi:** gün görünümünde bugün için şimdiki zaman çizgisi.
 - **⋯ menüsü:** *Ara* (notlarda arama + renk süzgeci) ve *Ayarlar* (renk teması: turuncu, mercan, orman, deniz, mor; yedeği kopyala/paylaş; yedekten geri yükle).
 - Telefonun açık/koyu temasına otomatik uyar.
 

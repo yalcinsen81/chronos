@@ -14,11 +14,8 @@ import { parseNote, splitNote } from '../services/notes';
 import { reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
 import Bell from './Bell';
-import Aurora from './Aurora';
 import Checkbox from './Checkbox';
-import { CelebrationLayer, useCelebrate } from './Confetti';
 import EmptyDay from './EmptyDay';
-import ProgressRing from './ProgressRing';
 import { webNoOutline } from './webStyles';
 
 export const LINE_HEIGHT = 46;
@@ -36,8 +33,7 @@ export default function DayColumn({
   onOpen: (note: EntryWithDate, alarm?: boolean) => void;
 }) {
   const c = usePalette();
-  const { saveNote, showDay, carryOver, aurora } = useAgenda();
-  const burst = useCelebrate(notes.filter((n) => !n.is_completed).length, notes.length);
+  const { saveNote, showDay, carryOver } = useAgenda();
   const [draft, setDraft] = useState('');
   const inputRef = useRef<TextInput>(null);
   const today = todayISO();
@@ -57,8 +53,7 @@ export default function DayColumn({
   };
 
   return (
-    <View style={[styles.column, { width }, isToday && { backgroundColor: c.accentSoft + '80' }]}>
-      {aurora && isToday && <Aurora height={130} radius={Radius.lg} />}
+    <View style={[styles.column, { width }, isToday && { backgroundColor: c.accentSoft + '55' }]}>
       <View style={styles.header}>
         <View style={styles.headRow}>
           <Pressable
@@ -99,17 +94,9 @@ export default function DayColumn({
               </Pressable>
             ) : (
               notes.length > 0 && (
-                <View style={styles.progress}>
-                  <Text style={[Type.caption, { color: c.textFaint }]}>
-                    {open === 0 ? 'Hepsi bitti' : `${notes.length - open}/${notes.length}`}
-                  </Text>
-                  <ProgressRing
-                    progress={(notes.length - open) / notes.length}
-                    color={c.accent}
-                    track={c.separator}
-                    onColor={c.onAccent}
-                  />
-                </View>
+                <Text style={[Type.caption, { color: c.textFaint }]}>
+                  {open === 0 ? 'Hepsi bitti' : `${notes.length - open}/${notes.length}`}
+                </Text>
               )
             )}
           </View>
@@ -117,7 +104,6 @@ export default function DayColumn({
         <View style={[styles.headerRule, { backgroundColor: isToday ? c.accent : c.separator }]} />
       </View>
 
-      <CelebrationLayer burst={burst} top={90} />
       <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {notes.length === 0 && !draft && (
           <EmptyDay

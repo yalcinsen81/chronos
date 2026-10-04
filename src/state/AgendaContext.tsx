@@ -70,8 +70,6 @@ interface AgendaState {
   /** Seçili vurgu rengi (ayarlardan) */
   accent: AccentKey;
   setAccent: (key: AccentKey) => Promise<void>;
-  aurora: boolean;
-  setAurora: (on: boolean) => Promise<void>;
   /** Tüm notları yedek metni (JSON) olarak verir */
   exportBackup: () => Promise<string>;
   /** Yedek metnini içe aktarır; var olan notlara dokunmaz. Eklenen not sayısını ya da hata iletisini döner. */
@@ -96,7 +94,6 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   const [revision, setRevision] = useState(0);
   const [view, setView] = useState<AgendaView>('week');
   const [accent, setAccentState] = useState<AccentKey>('turuncu');
-  const [aurora, setAuroraState] = useState(true);
   const [menuNote, setMenuNote] = useState<EntryWithDate | null>(null);
   const openMenu = useCallback((n: EntryWithDate) => {
     haptics.tap();
@@ -133,8 +130,6 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
         setAccentKey(savedAccent);
         setAccentState(savedAccent);
       }
-      const savedAurora = await repo.getSetting('aurora');
-      if (savedAurora != null) setAuroraState(savedAurora !== '0');
       if (cancelled) return;
       setNotebookId(nb.id);
       setReady(true);
@@ -280,15 +275,6 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     [repo],
   );
 
-  const setAurora = useCallback(
-    async (on: boolean) => {
-      setAuroraState(on);
-      haptics.select();
-      await repo.setSetting('aurora', on ? '1' : '0');
-    },
-    [repo],
-  );
-
   const listAll = useCallback(async () => (notebookId ? repo.listAllEntries(notebookId) : []), [repo, notebookId]);
 
   const exportBackup = useCallback(async () => JSON.stringify(buildBackup(await listAll()), null, 1), [listAll]);
@@ -338,8 +324,6 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     revision,
     accent,
     setAccent,
-    aurora,
-    setAurora,
     exportBackup,
     importBackup,
     listAll,

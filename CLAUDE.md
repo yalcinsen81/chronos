@@ -70,8 +70,7 @@ src/
 13. **Renk temaları** `theme.ts` → `AccentThemes`; seçim `settings` tablosunda (`accent`) saklanır. Bileşenler yine yalnızca `usePalette()` kullanır.
 14. **Yedek** `services/backup.ts` (saf, testli); arama `services/search.ts`. Satır kaydırma yok: eylemler uzun basma menüsündedir (`RowMenu`),
     çünkü telefonda yatay kaydırma gün sayfalarına aittir. Sürükle-bırak ve ana ekran widget'ı yapılmadı (Expo Go'da yok / doğrulanamadı).
-15. **Işıltılı arka plan** (`Aurora.tsx`) yalnızca SVG radyal gradyan + reanimated kullanır; three.js/WebGL eklenmez (Expo Go, boyut, okunabilirlik).
-    Ayar `settings.aurora`.
+15. **Sade kal, süsleme ekleme:** kullanıcı halka, konfeti, ışık lekeleri ve çizimleri "fazla süslü" bulup kaldırttı (2026-10-04). Yeni görsel süs eklemeden önce sor.
 16. **Kademeli giriş:** `TaskLine` satırları `index` ile sırayla belirir (FadeInDown + gecikme, en çok 8 adım); gün şeridinde seçili gün yaylanarak büyür.
 
 ## Komutlar

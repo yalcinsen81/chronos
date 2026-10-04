@@ -4,31 +4,19 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
 import { addDays, formatWeekday, fromISODate, todayISO, TR_MONTHS, type ISODate } from '../services/calendar';
 import { BLOCK_MINUTES, HOUR_HEIGHT, hourRange, layoutDay, timeToMinutes } from '../services/dayLayout';
 import { parseNote, splitNote } from '../services/notes';
-import { reminderFireDate, reminderLabel } from '../services/reminderTime';
+import { reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
-import Aurora from './Aurora';
 import Bell from './Bell';
 import Checkbox from './Checkbox';
-import { CelebrationLayer, useCelebrate } from './Confetti';
 import { TaskLine } from './DayColumn';
 import EmptyDay from './EmptyDay';
-import ProgressRing from './ProgressRing';
 import { webNoOutline } from './webStyles';
 
 const LABEL_W = 52;
@@ -46,7 +34,7 @@ export default function DayView({
   onNew: (date: ISODate, time: string | null) => void;
 }) {
   const c = usePalette();
-  const { saveNote, selectDate, aurora } = useAgenda();
+  const { saveNote, selectDate } = useAgenda();
   const today = todayISO();
   const isToday = date === today;
   const d = fromISODate(date);
@@ -54,7 +42,6 @@ export default function DayView({
   const timed = useMemo(() => notes.filter((n) => n.time_slot), [notes]);
   const untimed = useMemo(() => notes.filter((n) => !n.time_slot), [notes]);
   const open = notes.filter((n) => !n.is_completed).length;
-  const burst = useCelebrate(open, notes.length);
   const { start, end } = useMemo(() => hourRange(timed.map((n) => timeToMinutes(n.time_slot!))), [timed]);
   const placed = useMemo(
     () => layoutDay(timed.map((n) => ({ id: n.id, minutes: timeToMinutes(n.time_slot!) }))),
@@ -121,7 +108,6 @@ export default function DayView({
   return (
     <View style={styles.flex} {...pan.panHandlers}>
       <View style={styles.fixedWrap}>
-        {aurora && isToday && <Aurora height={130} />}
         <Animated.View key={date} entering={FadeIn.duration(200)} style={styles.sheet}>
           <View style={styles.header}>
             <Text style={[Type.largeTitle, { color: isToday ? c.accent : c.text }]}>{formatWeekday(date)}</Text>
@@ -131,25 +117,15 @@ export default function DayView({
                 {isToday ? '  ·  Bugün' : ''}
               </Text>
               {notes.length > 0 && (
-                <View style={styles.progress}>
-                  <Text style={[Type.caption, { color: c.textFaint }]}>
-                    {open === 0 ? 'Hepsi bitti' : `${notes.length - open}/${notes.length} tamam`}
-                  </Text>
-                  <ProgressRing
-                    progress={(notes.length - open) / notes.length}
-                    size={26}
-                    color={c.accent}
-                    track={c.separator}
-                    onColor={c.onAccent}
-                  />
-                </View>
+                <Text style={[Type.caption, { color: c.textFaint }]}>
+                  {open === 0 ? 'Hepsi bitti' : `${notes.length - open}/${notes.length} tamam`}
+                </Text>
               )}
             </View>
             <View style={[styles.rule, { backgroundColor: isToday ? c.accent : c.text }]} />
           </View>
         </Animated.View>
       </View>
-      <CelebrationLayer burst={burst} top={90} />
       <ScrollView
         ref={scroller}
         onLayout={(e) => (viewportH.current = e.nativeEvent.layout.height)}
@@ -228,7 +204,7 @@ export default function DayView({
 
             {isToday && nowTop >= 0 && nowTop <= totalH && (
               <View pointerEvents="none" style={[styles.now, { top: nowTop }]}>
-                <PulseDot color={c.accent} />
+                <View style={[styles.nowDot, { backgroundColor: c.accent }]} />
                 <View style={[styles.nowLine, { backgroundColor: c.accent }]} />
               </View>
             )}
@@ -237,37 +213,6 @@ export default function DayView({
       </ScrollView>
     </View>
   );
-}
-
-/** Şimdiki zaman noktası: yavaşça nabız gibi büyüyüp küçülen halka */
-function PulseDot({ color }: { color: string }) {
-  const t = useSharedValue(0);
-  useEffect(() => {
-    t.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.out(Easing.quad) }), -1);
-  }, [t]);
-  const ring = useAnimatedStyle(() => ({ opacity: 0.45 * (1 - t.value), transform: [{ scale: 1 + t.value * 1.8 }] }));
-  return (
-    <View style={styles.dotWrap}>
-      <Animated.View style={[styles.dotRing, { backgroundColor: color }, ring]} />
-      <View style={[styles.nowDot, { backgroundColor: color }]} />
-    </View>
-  );
-}
-
-/** Alarmı önümüzdeki bir saat içinde çalacak mı (dakikada bir yeniden bakılır) */
-function useAlarmSoon(note: EntryWithDate, alarm: boolean): boolean {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!alarm) return;
-    const t = setInterval(() => setTick((x) => x + 1), 60_000);
-    return () => clearInterval(t);
-  }, [alarm]);
-  if (!alarm || !note.date || !note.time_slot) return false;
-  void tick;
-  const at = reminderFireDate(note.date, note.time_slot, note.reminder_minutes);
-  if (!at) return false;
-  const diff = at.getTime() - Date.now();
-  return diff > 0 && diff <= 60 * 60_000;
 }
 
 /** Saatli notun çizelgedeki bloğu */
@@ -292,14 +237,6 @@ function Block({
   const tint = tagColor(note.color, c) ?? c.accent;
   const done = note.is_completed;
   const alarm = note.reminder_minutes != null && !done;
-  const soon = useAlarmSoon(note, alarm);
-  const glow = useSharedValue(0);
-  useEffect(() => {
-    glow.value = soon
-      ? withRepeat(withSequence(withTiming(1, { duration: 900 }), withTiming(0, { duration: 900 })), -1)
-      : 0;
-  }, [soon, glow]);
-  const glowStyle = useAnimatedStyle(() => ({ opacity: 0.25 + glow.value * 0.55 }));
 
   return (
     <Animated.View
@@ -326,7 +263,6 @@ function Block({
           pressed && { opacity: 0.7 },
         ]}
       >
-        {soon && <Animated.View pointerEvents="none" style={[styles.glow, { borderColor: c.accent }, glowStyle]} />}
         <Checkbox checked={done} onPress={() => toggleNote(note.id)} tint={tagColor(note.color, c)} size={16} />
         <View style={styles.blockText}>
           <Text numberOfLines={1} style={[Type.sub, { color: done ? c.textFaint : c.text }, done && styles.struck]}>
@@ -407,8 +343,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   nowDot: { width: 8, height: 8, borderRadius: 4 },
-  dotWrap: { width: 8, height: 8, alignItems: 'center', justifyContent: 'center' },
-  dotRing: { position: 'absolute', width: 8, height: 8, borderRadius: 4 },
-  glow: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: Radius.md, borderWidth: 2 },
   nowLine: { flex: 1, height: 2 },
 });
