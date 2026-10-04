@@ -1,20 +1,16 @@
-// Mikro-haptik geri bildirimler. Hata durumunda sessizce yutulur (simülatör / desteklemeyen cihaz).
+// Hafif dokunsal geri bildirim. Desteklenmeyen ortamlarda (web, simülatör) sessizce yutulur.
 
 import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
 
-const safe = (p: Promise<void>) => p.catch(() => undefined);
+const safe = (fn: () => Promise<void>) => {
+  if (Platform.OS === 'web') return;
+  fn().catch(() => undefined);
+};
 
 export const haptics = {
-  /** Sayfa çevirme: kağıdın tok hissi */
-  pageTurn: () => safe(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)),
-  /** Kalem / araç değişimi */
-  toolChange: () => safe(Haptics.selectionAsync()),
-  /** Sürüklemeye başlama (Post-it kaldırma) */
-  pickUp: () => safe(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)),
-  /** Bırakma / kaydetme */
-  drop: () => safe(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid)),
-  success: () => safe(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)),
-  warning: () => safe(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)),
-  /** Elastik bandın çıkması */
-  snap: () => safe(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)),
+  /** Gün seçimi, not tamamlama */
+  select: () => safe(() => Haptics.selectionAsync()),
+  /** Not ekleme / silme */
+  tap: () => safe(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)),
 };

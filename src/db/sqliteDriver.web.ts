@@ -1,4 +1,4 @@
-// Web önizleme sürücüsü: op-sqlite yerine tarayıcıda sql.js (WASM SQLite) kullanılır.
+// Web önizleme sürücüsü: expo-sqlite yerine tarayıcıda sql.js (WASM SQLite) kullanılır.
 // Aynı SQL şeması ve repository çalışır; veri localStorage'a kaydedilir (erişilemezse yalnızca bellekte kalır).
 
 import { getSqlJs } from '../platform/bootstrap.web';
@@ -25,7 +25,7 @@ function loadSaved(): Uint8Array | undefined {
   }
 }
 
-export function createOpSqliteDriver(_name = 'chronos-paper.db'): SqlDriver {
+export function createSqliteDriver(_name = 'chronos-paper.db'): SqlDriver {
   const SQL = getSqlJs();
   const db = new SQL.Database(loadSaved()) as SqlJsDb;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;

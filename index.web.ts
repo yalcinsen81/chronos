@@ -1,5 +1,5 @@
-// Web girişi (tarayıcı önizlemesi): Skia (CanvasKit) ve SQLite (sql.js) WASM modülleri yüklenmeden
-// uygulama modülleri içe aktarılmaz; çünkü shader'lar modül yüklenirken derlenir.
+// Web girişi (tarayıcı önizlemesi): SQLite (sql.js) WASM modülü yüklenmeden
+// uygulama modülleri içe aktarılmaz; veri sürücüsü açılışta hazır olmalıdır.
 import { registerRootComponent } from 'expo';
 
 import { bootstrapWeb } from './src/platform/bootstrap.web';

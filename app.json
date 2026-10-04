@@ -1,18 +1,18 @@
 {
   "expo": {
-    "name": "Chronos Paper",
+    "name": "Chronos",
     "slug": "chronos-paper",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.chronospaper.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FDFBF7",
+        "backgroundColor": "#F6F7F9",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -26,24 +26,7 @@
       "output": "single"
     },
     "plugins": [
-      [
-        "expo-audio",
-        {
-          "microphonePermission": "Sesli not kaydı için mikrofon erişimi gerekir."
-        }
-      ],
-      [
-        "expo-speech-recognition",
-        {
-          "microphonePermission": "Sesli notları kaydetmek için mikrofon erişimi gerekir.",
-          "speechRecognitionPermission": "Söylediklerinizi ajandaya yazmak için konuşma tanıma kullanılır.",
-          "androidSpeechServicePackages": [
-            "com.google.android.googlequicksearchbox",
-            "com.google.android.as"
-          ]
-        }
-      ],
-      "expo-font"
+      "expo-sqlite"
     ]
   }
 }

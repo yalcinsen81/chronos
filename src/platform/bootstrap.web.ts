@@ -1,7 +1,5 @@
-// Tarayıcı önizlemesi için WASM bağımlılıklarını yükler.
+// Tarayıcı önizlemesi için SQLite'ı (sql.js WASM) yükler.
 // Dosyalar public/ klasöründen sayfaya göreli yoldan servis edilir (alt dizinde barındırmaya uygun).
-
-import { LoadSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
 
 type SqlJsStatic = { Database: new (data?: Uint8Array) => unknown };
 
@@ -23,12 +21,7 @@ function loadScript(src: string): Promise<void> {
 }
 
 export async function bootstrapWeb(): Promise<void> {
-  await Promise.all([
-    LoadSkiaWeb({ locateFile: (file: string) => `./${file}` }),
-    (async () => {
-      await loadScript('./sql-wasm-browser.js');
-      const init = (globalThis as unknown as { initSqlJs: (o: object) => Promise<SqlJsStatic> }).initSqlJs;
-      sqlJs = await init({ locateFile: (file: string) => `./${file.replace('sql-wasm.wasm', 'sql-wasm-browser.wasm')}` });
-    })(),
-  ]);
+  await loadScript('./sql-wasm-browser.js');
+  const init = (globalThis as unknown as { initSqlJs: (o: object) => Promise<SqlJsStatic> }).initSqlJs;
+  sqlJs = await init({ locateFile: (file: string) => `./${file.replace('sql-wasm.wasm', 'sql-wasm-browser.wasm')}` });
 }

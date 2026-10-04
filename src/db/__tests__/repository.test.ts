@@ -81,4 +81,15 @@ describe('repository', () => {
     await repo.deleteStroke(s.id);
     expect(await repo.listStrokes(page.id)).toHaveLength(0);
   });
+
+  it('notu günceller ve siler', async () => {
+    const { repo, nb } = await setup();
+    const e = await repo.createEntry(nb.id, { text: 'Süt al', date: '2026-10-04' });
+    await repo.updateEntry(e.id, '  Süt ve ekmek al ', '08:30');
+    const [u] = await repo.listEntriesForDate(nb.id, '2026-10-04');
+    expect(u.text_content).toBe('Süt ve ekmek al');
+    expect(u.time_slot).toBe('08:30');
+    await repo.deleteEntry(e.id);
+    expect(await repo.listEntriesForDate(nb.id, '2026-10-04')).toHaveLength(0);
+  });
 });

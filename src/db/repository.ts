@@ -190,6 +190,11 @@ export function createRepository(db: SqlDriver) {
     await db.execute('UPDATE entries SET is_completed = 1 - is_completed WHERE id = ?', [entryId]);
   }
 
+  /** Notun metnini ve saatini günceller (satır içi düzenleme). */
+  async function updateEntry(entryId: string, text: string, time: string | null) {
+    await db.execute('UPDATE entries SET text_content = ?, time_slot = ? WHERE id = ?', [text.trim(), time, entryId]);
+  }
+
   async function deleteEntry(entryId: string) {
     await db.execute('DELETE FROM entries WHERE id = ?', [entryId]);
   }
@@ -209,6 +214,7 @@ export function createRepository(db: SqlDriver) {
     moveEntryToDate,
     moveEntryToInbox,
     toggleEntry,
+    updateEntry,
     deleteEntry,
   };
 }
