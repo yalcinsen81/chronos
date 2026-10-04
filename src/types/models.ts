@@ -39,4 +39,5 @@ export interface Entry {
   is_completed: boolean;
   audio_path: string | null;
   is_inbox: boolean;
+  created_at: number; // Unix ms; aynı saat çizgisindeki girişlerin sırası
 }

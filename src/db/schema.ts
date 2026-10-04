@@ -1,5 +1,5 @@
 // Local-first SQLite şeması (op-sqlite ile çalıştırılacak).
-// Bağlantı ve migration mantığı sonraki fazlarda src/db/index.ts içine eklenecek.
+// Kurulum: src/db/migrate.ts, sorgular: src/db/repository.ts
 
 export const SCHEMA_VERSION = 1;
 
@@ -32,10 +32,11 @@ export const CREATE_TABLES: readonly string[] = [
     text_content TEXT NOT NULL,
     is_completed INTEGER NOT NULL DEFAULT 0,
     audio_path TEXT,
-    is_inbox INTEGER NOT NULL DEFAULT 0
+    is_inbox INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL DEFAULT 0
   )`,
   // Günlük sayfaya tarihle hızlı erişim ve Havuz sorguları için indeksler
-  `CREATE INDEX IF NOT EXISTS idx_pages_notebook_date ON pages(notebook_id, date)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_notebook_date ON pages(notebook_id, date)`,
   `CREATE INDEX IF NOT EXISTS idx_strokes_page ON strokes(page_id)`,
   `CREATE INDEX IF NOT EXISTS idx_entries_page ON entries(page_id)`,
   `CREATE INDEX IF NOT EXISTS idx_entries_inbox ON entries(is_inbox)`,
