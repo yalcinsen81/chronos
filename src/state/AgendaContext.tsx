@@ -7,6 +7,8 @@ import type { SqlDriver } from '../db/driver';
 import { migrate } from '../db/migrate';
 import { createRepository, type EntryWithDate, type Repository } from '../db/repository';
 import { addDays, startOfWeek, todayISO, type ISODate } from '../services/calendar';
+import { setAccentKey, isAccentKey, type AccentKey } from '../constants/theme';
+import { buildBackup, parseBackup } from '../services/backup';
 import { haptics } from '../services/haptics';
 import {
   cancelReminder,
@@ -53,6 +55,10 @@ interface AgendaState {
   revision: number;
   /** Haftalık ya da günlük görünüm */
   view: AgendaView;
+  /** Uzun basılan not (eylem menüsü) */
+  menuNote: EntryWithDate | null;
+  openMenu: (note: EntryWithDate) => void;
+  closeMenu: () => void;
   selectDate: (date: ISODate) => void;
   /** Günü seçip gün görünümüne geçer */
   showDay: (date: ISODate) => void;
@@ -61,6 +67,15 @@ interface AgendaState {
   moveNote: (id: string, date: ISODate) => Promise<void>;
   /** O günün tamamlanmamış notlarını bugüne aktarır */
   carryOver: (date: ISODate) => Promise<void>;
+  /** Seçili vurgu rengi (ayarlardan) */
+  accent: AccentKey;
+  setAccent: (key: AccentKey) => Promise<void>;
+  /** Tüm notları yedek metni (JSON) olarak verir */
+  exportBackup: () => Promise<string>;
+  /** Yedek metnini içe aktarır; var olan notlara dokunmaz. Eklenen not sayısını ya da hata iletisini döner. */
+  importBackup: (json: string) => Promise<{ added: number } | { error: string }>;
+  /** Tüm notlar (arama için) */
+  listAll: () => Promise<EntryWithDate[]>;
   saveNote: (input: NoteInput) => Promise<void>;
   toggleNote: (id: string) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
@@ -78,6 +93,13 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const [revision, setRevision] = useState(0);
   const [view, setView] = useState<AgendaView>('week');
+  const [accent, setAccentState] = useState<AccentKey>('turuncu');
+  const [menuNote, setMenuNote] = useState<EntryWithDate | null>(null);
+  const openMenu = useCallback((n: EntryWithDate) => {
+    haptics.tap();
+    setMenuNote(n);
+  }, []);
+  const closeMenu = useCallback(() => setMenuNote(null), []);
   const seriesLock = useRef<Promise<void>>(Promise.resolve());
   const dateRef = useRef(date);
   dateRef.current = date;
@@ -102,6 +124,12 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     (async () => {
       await migrate(driver);
       const nb = await repo.ensureDefaultNotebook();
+      if (cancelled) return;
+      const savedAccent = await repo.getSetting('accent');
+      if (isAccentKey(savedAccent)) {
+        setAccentKey(savedAccent);
+        setAccentState(savedAccent);
+      }
       if (cancelled) return;
       setNotebookId(nb.id);
       setReady(true);
@@ -237,6 +265,33 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     [repo, notebookId, bump, syncReminder],
   );
 
+  const setAccent = useCallback(
+    async (key: AccentKey) => {
+      setAccentKey(key);
+      setAccentState(key);
+      haptics.select();
+      await repo.setSetting('accent', key);
+    },
+    [repo],
+  );
+
+  const listAll = useCallback(async () => (notebookId ? repo.listAllEntries(notebookId) : []), [repo, notebookId]);
+
+  const exportBackup = useCallback(async () => JSON.stringify(buildBackup(await listAll()), null, 1), [listAll]);
+
+  const importBackup = useCallback(
+    async (json: string) => {
+      if (!notebookId) return { error: 'Veri tabanı hazır değil.' };
+      const parsed = parseBackup(json);
+      if (!parsed.ok) return { error: parsed.error };
+      const added = await repo.importEntries(notebookId, parsed.entries);
+      for (const id of added) await syncReminder(id);
+      bump();
+      return { added: added.length };
+    },
+    [repo, notebookId, bump, syncReminder],
+  );
+
   // Bildirime dokunma ve bildirimdeki "ertele" / "tamamla" düğmeleri
   useEffect(() => {
     if (!ready) return;
@@ -267,7 +322,15 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     weekDays,
     weekNotes,
     revision,
+    accent,
+    setAccent,
+    exportBackup,
+    importBackup,
+    listAll,
     view,
+    menuNote,
+    openMenu,
+    closeMenu,
     selectDate,
     showDay,
     showWeek,

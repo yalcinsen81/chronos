@@ -11,6 +11,9 @@ import { useAgenda } from '../state/AgendaContext';
 import type { EntryWithDate } from '../db/repository';
 import AlarmButton from './AlarmList';
 import CalendarView from './CalendarView';
+import PressScale from './PressScale';
+import SearchSheet from './SearchSheet';
+import SettingsSheet from './SettingsSheet';
 
 export default function WeekHeader({
   showStrip,
@@ -25,6 +28,11 @@ export default function WeekHeader({
   const day = view === 'day';
   const step = day ? 1 : 7;
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Şerit görünürken oklar şeridin iki ucundadır (dar ekranda üst çubuk sığsın); yoksa üst çubukta durur
+  const arrowsInStrip = showStrip;
   const today = todayISO();
   const s = fromISODate(weekStart);
   const e = fromISODate(weekDays[6]);
@@ -37,15 +45,16 @@ export default function WeekHeader({
     <View style={[styles.wrap, { borderBottomColor: c.separator }]}>
       <View style={styles.bar}>
         {day && (
-          <Pressable
+          <PressScale
             onPress={showWeek}
+            haptic
             accessibilityRole="button"
             accessibilityLabel="Haftaya dön"
-            style={({ pressed }) => [styles.back, { backgroundColor: c.accentSoft }, pressed && { opacity: 0.7 }]}
+            style={[styles.back, { backgroundColor: c.accentSoft }]}
           >
             <Ionicons name="chevron-back" size={16} color={c.accent} />
             <Text style={[Type.caption, { color: c.accent }]}>Hafta</Text>
-          </Pressable>
+          </PressScale>
         )}
         {(!day || width >= WIDE_BREAKPOINT) && (
           <Pressable
@@ -67,29 +76,51 @@ export default function WeekHeader({
         )}
         {day && width < WIDE_BREAKPOINT && <View style={styles.spacer} />}
         <View style={styles.actions}>
-          <AlarmButton onOpenNote={onOpenNote} />
-          <IconBtn
-            icon="chevron-back"
-            label={day ? 'Önceki gün' : 'Önceki hafta'}
-            onPress={() => selectDate(addDays(date, -step))}
-          />
-          <Pressable
+          {!arrowsInStrip && (
+            <IconBtn
+              icon="chevron-back"
+              label={day ? 'Önceki gün' : 'Önceki hafta'}
+              onPress={() => selectDate(addDays(date, -step))}
+            />
+          )}
+          <PressScale
             onPress={() => selectDate(today)}
             accessibilityRole="button"
-            style={({ pressed }) => [styles.todayBtn, { backgroundColor: c.accentSoft }, pressed && { opacity: 0.7 }]}
+            accessibilityLabel="Bugün"
+            style={[styles.todayBtn, { backgroundColor: c.accentSoft }]}
           >
             <Text style={[Type.caption, { color: c.accent, fontWeight: '700' }]}>Bugün</Text>
+          </PressScale>
+          {!arrowsInStrip && (
+            <IconBtn
+              icon="chevron-forward"
+              label={day ? 'Sonraki gün' : 'Sonraki hafta'}
+              onPress={() => selectDate(addDays(date, step))}
+            />
+          )}
+          <AlarmButton onOpenNote={onOpenNote} />
+          <Pressable
+            onPress={() => setMenuOpen(true)}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="Menü"
+            style={({ pressed }) => [styles.icon, pressed && { backgroundColor: c.fill }]}
+          >
+            <Ionicons name="ellipsis-horizontal" size={20} color={c.text} />
           </Pressable>
-          <IconBtn
-            icon="chevron-forward"
-            label={day ? 'Sonraki gün' : 'Sonraki hafta'}
-            onPress={() => selectDate(addDays(date, step))}
-          />
         </View>
       </View>
 
       {showStrip && (
         <View style={styles.strip}>
+          {arrowsInStrip && (
+            <IconBtn
+              icon="chevron-back"
+              label={day ? 'Önceki gün' : 'Önceki hafta'}
+              onPress={() => selectDate(addDays(date, -step))}
+              small
+            />
+          )}
           {weekDays.map((d, i) => {
             const selected = d === date;
             const isToday = d === today;
@@ -123,6 +154,14 @@ export default function WeekHeader({
               </Pressable>
             );
           })}
+          {arrowsInStrip && (
+            <IconBtn
+              icon="chevron-forward"
+              label={day ? 'Sonraki gün' : 'Sonraki hafta'}
+              onPress={() => selectDate(addDays(date, step))}
+              small
+            />
+          )}
         </View>
       )}
 
@@ -136,6 +175,38 @@ export default function WeekHeader({
           </Pressable>
         </Pressable>
       </Modal>
+
+      <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+        <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)}>
+          <Pressable
+            style={[styles.menu, { backgroundColor: c.card, borderColor: c.separator, shadowColor: c.shadow }]}
+            onPress={() => undefined}
+          >
+            {(
+              [
+                { icon: 'search', label: 'Ara', run: () => setSearchOpen(true) },
+                { icon: 'settings-outline', label: 'Ayarlar', run: () => setSettingsOpen(true) },
+              ] as const
+            ).map((it) => (
+              <Pressable
+                key={it.label}
+                onPress={() => {
+                  setMenuOpen(false);
+                  it.run();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={it.label}
+                style={({ pressed }) => [styles.menuRow, pressed && { backgroundColor: c.fill }]}
+              >
+                <Ionicons name={it.icon} size={19} color={c.accent} />
+                <Text style={[Type.body, { color: c.text }]}>{it.label}</Text>
+              </Pressable>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <SearchSheet visible={searchOpen} onClose={() => setSearchOpen(false)} onOpenNote={onOpenNote} />
+      <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </View>
   );
 }
@@ -144,10 +215,12 @@ function IconBtn({
   icon,
   label,
   onPress,
+  small,
 }: {
   icon: 'chevron-back' | 'chevron-forward';
   label: string;
   onPress: () => void;
+  small?: boolean;
 }) {
   const c = usePalette();
   return (
@@ -156,9 +229,9 @@ function IconBtn({
       hitSlop={6}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [styles.icon, pressed && { backgroundColor: c.fill }]}
+      style={({ pressed }) => [styles.icon, small && styles.iconSmall, pressed && { backgroundColor: c.fill }]}
     >
-      <Ionicons name={icon} size={20} color={c.text} />
+      <Ionicons name={icon} size={small ? 18 : 20} color={c.text} />
     </Pressable>
   );
 }
@@ -194,7 +267,20 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     justifyContent: 'center',
   },
-  strip: { flexDirection: 'row', paddingHorizontal: Space.sm, paddingBottom: Space.sm },
+  iconSmall: { width: 28, height: 34, borderRadius: 14, alignSelf: 'center' },
+  strip: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: Space.xs, paddingBottom: Space.sm },
+  menuBackdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 56, paddingHorizontal: Space.lg },
+  menu: {
+    minWidth: 170,
+    borderRadius: Radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: Space.xs,
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  menuRow: { flexDirection: 'row', alignItems: 'center', gap: Space.md, paddingHorizontal: Space.md, height: 44 },
   stripDay: { flex: 1, alignItems: 'center', gap: 4 },
   stripNum: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   dot: { width: 4, height: 4, borderRadius: 2 },

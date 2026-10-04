@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { useFonts } from 'expo-font';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces/600SemiBold';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import AgendaScreen from './src/components/AgendaScreen';
-import { usePalette } from './src/constants/theme';
+import { SERIF_FONT, usePalette } from './src/constants/theme';
 import { createSqliteDriver } from './src/db/sqliteDriver';
 import { AgendaProvider, useAgenda } from './src/state/AgendaContext';
 
@@ -26,9 +27,9 @@ export default function App() {
 function Root() {
   const c = usePalette();
   const { ready } = useAgenda();
-  // İkon fontu yüklenmeden çizilirse ikonlar bir an boş kutu görünür
-  const [fontsLoaded] = useFonts(Ionicons.font);
-  if (!ready || !fontsLoaded) {
+  // Yazı tipleri yüklenmeden çizilirse ikonlar bir an boş kutu, başlıklar yedek yazı tipiyle görünür
+  const [fontsLoaded, fontError] = useFonts({ ...Ionicons.font, [SERIF_FONT]: Fraunces_600SemiBold });
+  if (!ready || (!fontsLoaded && !fontError)) {
     return (
       <View style={[styles.loading, { backgroundColor: c.bg }]}>
         <ActivityIndicator color={c.accent} />

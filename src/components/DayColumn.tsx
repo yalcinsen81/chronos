@@ -15,6 +15,9 @@ import { reminderLabel } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
 import Bell from './Bell';
 import Checkbox from './Checkbox';
+import { CelebrationLayer, useCelebrate } from './Confetti';
+import EmptyDay from './EmptyDay';
+import ProgressRing from './ProgressRing';
 import { webNoOutline } from './webStyles';
 
 export const LINE_HEIGHT = 46;
@@ -33,6 +36,7 @@ export default function DayColumn({
 }) {
   const c = usePalette();
   const { saveNote, showDay, carryOver } = useAgenda();
+  const burst = useCelebrate(notes.filter((n) => !n.is_completed).length, notes.length);
   const [draft, setDraft] = useState('');
   const inputRef = useRef<TextInput>(null);
   const today = todayISO();
@@ -93,9 +97,17 @@ export default function DayColumn({
               </Pressable>
             ) : (
               notes.length > 0 && (
-                <Text style={[Type.caption, { color: c.textFaint }]}>
-                  {open === 0 ? 'Hepsi bitti' : `${open} açık`}
-                </Text>
+                <View style={styles.progress}>
+                  <Text style={[Type.caption, { color: c.textFaint }]}>
+                    {open === 0 ? 'Hepsi bitti' : `${notes.length - open}/${notes.length}`}
+                  </Text>
+                  <ProgressRing
+                    progress={(notes.length - open) / notes.length}
+                    color={c.accent}
+                    track={c.separator}
+                    onColor={c.onAccent}
+                  />
+                </View>
               )
             )}
           </View>
@@ -103,7 +115,15 @@ export default function DayColumn({
         <View style={[styles.headerRule, { backgroundColor: isToday ? c.accent : c.separator }]} />
       </View>
 
+      <CelebrationLayer burst={burst} top={90} />
       <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {notes.length === 0 && !draft && (
+          <EmptyDay
+            height={150}
+            title={isPast ? 'Not yok' : 'Bu gün boş'}
+            hint={isPast ? 'Bu güne not eklenmemiş.' : 'Aşağıdaki satıra dokun, yaz, Enter.'}
+          />
+        )}
         {notes.map((n) => (
           <TaskLine key={n.id} note={n} onOpen={(alarm) => onOpen(n, alarm)} />
         ))}
@@ -144,7 +164,7 @@ export default function DayColumn({
 
 export function TaskLine({ note, onOpen }: { note: EntryWithDate; onOpen: (alarm?: boolean) => void }) {
   const c = usePalette();
-  const { toggleNote } = useAgenda();
+  const { toggleNote, openMenu } = useAgenda();
   const { title, body } = splitNote(note.text_content);
   const tint = tagColor(note.color, c);
   const done = note.is_completed;
@@ -158,6 +178,8 @@ export function TaskLine({ note, onOpen }: { note: EntryWithDate; onOpen: (alarm
     >
       <Pressable
         onPress={() => onOpen()}
+        onLongPress={() => openMenu(note)}
+        delayLongPress={380}
         style={({ pressed }) => [
           styles.line,
           styles.task,
@@ -165,7 +187,7 @@ export function TaskLine({ note, onOpen }: { note: EntryWithDate; onOpen: (alarm
           tint && { backgroundColor: tint + (c.scheme === 'dark' ? '2E' : '1F') },
           pressed && { opacity: 0.6 },
         ]}
-        accessibilityHint="Ayrıntılar için dokun"
+        accessibilityHint="Ayrıntılar için dokun, menü için uzun bas"
       >
         <Checkbox checked={done} onPress={() => toggleNote(note.id)} tint={tint} size={18} />
         {note.time_slot && (
@@ -205,6 +227,7 @@ const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', minHeight: 54 },
   headLeft: { gap: 2 },
   headRight: { paddingBottom: 6 },
+  progress: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   weekday: { letterSpacing: 1.2 },
   numRow: { flexDirection: 'row', alignItems: 'center', gap: Space.sm },
   num: {

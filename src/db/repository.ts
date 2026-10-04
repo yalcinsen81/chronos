@@ -307,6 +307,61 @@ export function createRepository(db: SqlDriver) {
     return cancelled;
   }
 
+  // --- Ayarlar ----------------------------------------------------------------
+
+  async function getSetting(key: string): Promise<string | null> {
+    const rows = await db.execute('SELECT value FROM settings WHERE key = ?', [key]);
+    return rows[0] ? String(rows[0].value) : null;
+  }
+
+  async function setSetting(key: string, value: string) {
+    await db.execute(
+      'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      [key, value],
+    );
+  }
+
+  // --- Yedek, geri yükleme, arama -----------------------------------------------
+
+  /** Tarihli tüm notlar (yedek ve arama için), tarihe göre */
+  async function listAllEntries(notebookId: string): Promise<EntryWithDate[]> {
+    const rows = await db.execute(
+      `${ENTRY_SELECT} WHERE p.notebook_id = ? AND p.date IS NOT NULL ORDER BY p.date, e.time_slot IS NULL, e.time_slot, e.created_at`,
+      [notebookId],
+    );
+    return rows.map(toEntry);
+  }
+
+  /** Yedekten notları ekler; kimliği zaten var olanlar atlanır. Eklenen notların kimliklerini döner. */
+  async function importEntries(
+    notebookId: string,
+    list: {
+      id: string;
+      date: ISODate;
+      time: string | null;
+      text: string;
+      done: boolean;
+      color: string | null;
+      reminder: number | null;
+      repeat: string | null;
+      series: string | null;
+      created: number;
+    }[],
+  ): Promise<string[]> {
+    const added: string[] = [];
+    for (const e of list) {
+      if (await getEntry(e.id)) continue;
+      const page = await getOrCreatePage(notebookId, e.date);
+      await db.execute(
+        `INSERT INTO entries (id, page_id, time_slot, text_content, is_completed, is_inbox, created_at, color, reminder_minutes, repeat, series_id)
+         VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+        [e.id, page.id, e.time, e.text, e.done ? 1 : 0, e.created, e.color, e.reminder, e.repeat, e.series],
+      );
+      added.push(e.id);
+    }
+    return added;
+  }
+
   async function deleteEntry(entryId: string) {
     await db.execute('DELETE FROM entries WHERE id = ?', [entryId]);
   }
@@ -335,6 +390,10 @@ export function createRepository(db: SqlDriver) {
     listEntriesWithReminder,
     listSeriesTails,
     changeSeries,
+    getSetting,
+    setSetting,
+    listAllEntries,
+    importEntries,
     deleteEntry,
   };
 }

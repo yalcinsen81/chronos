@@ -2,9 +2,11 @@
 // Geniş ekranda haftanın 7 günü yan yana sütunlar; telefonda günler yatay kaydırılan sayfalardır
 // (bir sonraki günün kenarı görünür) ve üstteki gün şeridiyle atlanır.
 
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -24,16 +26,27 @@ import { useAgenda } from '../state/AgendaContext';
 import DayColumn from './DayColumn';
 import DayView from './DayView';
 import NoteSheet, { type NoteDraft } from './NoteSheet';
+import PressScale from './PressScale';
+import RowMenu from './RowMenu';
 import WeekHeader from './WeekHeader';
 
 export default function AgendaScreen() {
   const c = usePalette();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
-  const { date, weekStart, weekDays, weekNotes, selectDate, view } = useAgenda();
+  const { date, weekStart, weekDays, weekNotes, selectDate, view, menuNote } = useAgenda();
   const [openNote, setOpenNote] = useState<EntryWithDate | null>(null);
   const [alarmFirst, setAlarmFirst] = useState(false);
   const [draft, setDraft] = useState<NoteDraft | null>(null);
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const a = Keyboard.addListener('keyboardDidShow', () => setTyping(true));
+    const b = Keyboard.addListener('keyboardDidHide', () => setTyping(false));
+    return () => {
+      a.remove();
+      b.remove();
+    };
+  }, []);
 
   // Hafta değişince sütunlar değişim yönüne doğru kayarak gelir
   const prevWeek = useRef(weekStart);
@@ -93,6 +106,21 @@ export default function AgendaScreen() {
           </Animated.View>
         )}
       </KeyboardAvoidingView>
+      {!wide && !typing && current === null && draft === null && (
+        <Animated.View entering={ZoomIn.duration(220)} style={styles.fabWrap} pointerEvents="box-none">
+          <PressScale
+            haptic
+            scale={0.9}
+            onPress={() => setDraft({ date, time: null })}
+            accessibilityRole="button"
+            accessibilityLabel="Yeni not"
+            style={[styles.fab, { backgroundColor: c.accent, shadowColor: c.accent }]}
+          >
+            <Ionicons name="add" size={30} color={c.onAccent} />
+          </PressScale>
+        </Animated.View>
+      )}
+      <RowMenu onEdit={() => menuNote && open(menuNote)} />
       <NoteSheet
         note={current}
         draft={draft}
@@ -186,4 +214,16 @@ function PhoneWeek({ width, days, notes, focus, onFocus, onOpen }: WeekProps & {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   wideContent: { paddingHorizontal: Space.lg },
+  fabWrap: { position: 'absolute', right: Space.lg, bottom: Space.xl },
+  fab: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
 });

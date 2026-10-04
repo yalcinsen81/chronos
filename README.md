@@ -10,6 +10,10 @@ Renkler sıcak bir kağıt havasında: sıcak beyaz zemin, canlı turuncu vurgu,
 |---|---|---|---|---|---|
 | ![](docs/screenshots/hafta.png) | ![](docs/screenshots/gun.png) | ![](docs/screenshots/telefon-gun.png) | ![](docs/screenshots/tekrar.png) | ![](docs/screenshots/alarmlar.png) | ![](docs/screenshots/koyu.png) |
 
+| Renk teması (orman) | Telefonda yeni not | Arama |
+|---|---|---|
+| ![](docs/screenshots/tema-orman.png) | ![](docs/screenshots/telefon-yeni-not.png) | ![](docs/screenshots/arama.png) |
+
 ## Telefonda denemek (en kolay yol)
 
 1. Telefona **Expo Go** uygulamasını kur (App Store / Google Play).
@@ -42,6 +46,11 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
   sorulur. Bildirimde **"10 dk ertele"** ve **"Tamamla"** düğmeleri çıkar (düğmeye basınca uygulama açılır ve işlemi yapar);
   bildirime dokunmak o günün görünümünü açar. Tekrarlayan notların alarmları yalnızca 21 gün öncesinden kurulur
   (iOS en çok 64 bekleyen bildirim tutar); uygulamayı en az üç haftada bir açman yeterli. Tarayıcı önizlemesinde alarm çalmaz.
+- **Uzun bas menüsü:** nota (satır ya da gün çizelgesindeki blok) uzun basınca *Düzenle, Tamamla/Geri al, Bugüne taşı, Yarına taşı, Sil*.
+- **Telefonda +:** sağ alttaki turuncu düğme seçili güne yeni not açar; kart alttan yükselir, tutamaçtan aşağı çekince kapanır.
+- **İlerleme halkası ve konfeti:** her günün başlığında tamamlanan not oranı görünür; hepsini bitirince halka dolar ve konfeti patlar.
+- **Zaman çizgisi:** gün görünümünde şimdiki zaman noktası nabız gibi atar; alarmı bir saat içinde çalacak blok yanıp söner.
+- **⋯ menüsü:** *Ara* (notlarda arama + renk süzgeci) ve *Ayarlar* (renk teması: turuncu, mercan, orman, deniz, mor; yedeği kopyala/paylaş; yedekten geri yükle).
 - Telefonun açık/koyu temasına otomatik uyar.
 
 ## Tarayıcı önizlemesi

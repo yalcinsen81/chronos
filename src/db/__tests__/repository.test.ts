@@ -202,4 +202,36 @@ describe('repository', () => {
     const e = await repo.createEntry(nb.id, { text: 'x', date: '2026-10-04', repeat: 'weekly' });
     expect((await repo.getEntry(e.id))?.repeat).toBe('weekly');
   });
+
+  it('ayar saklar ve günceller; yedek içe aktarma aynı kimliği iki kez eklemez', async () => {
+    const { repo, nb } = await setup();
+    expect(await repo.getSetting('accent')).toBeNull();
+    await repo.setSetting('accent', 'deniz');
+    await repo.setSetting('accent', 'mor');
+    expect(await repo.getSetting('accent')).toBe('mor');
+
+    const item = {
+      id: 'yedek1',
+      date: '2026-10-09',
+      time: '10:00',
+      text: 'Geri geldi',
+      done: true,
+      color: 'green',
+      reminder: 5,
+      repeat: null,
+      series: null,
+      created: 5,
+    };
+    expect(await repo.importEntries(nb.id, [item])).toEqual(['yedek1']);
+    expect(await repo.importEntries(nb.id, [item])).toEqual([]);
+    const all = await repo.listAllEntries(nb.id);
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({
+      id: 'yedek1',
+      date: '2026-10-09',
+      is_completed: true,
+      color: 'green',
+      reminder_minutes: 5,
+    });
+  });
 });

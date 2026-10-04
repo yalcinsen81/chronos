@@ -16,7 +16,7 @@ Expo'ya özgü genel kurallar için `AGENTS.md` dosyasını da oku.
 |---|---|
 | Yerel veri | `expo-sqlite` (web önizlemede `sql.js`, bkz. `src/db/sqliteDriver.web.ts`) |
 | İkonlar | `@expo/vector-icons/Ionicons` (yalnızca Ionicons içe aktarılır; tüm paket web paketini şişirir) |
-| Yazı tipi | Sistem yazı tipi (iOS'ta SF Pro); ölçek `theme.ts` → `Type` |
+| Yazı tipi | Gövde sistem yazı tipi; başlıklar Fraunces (`@expo-google-fonts/fraunces/600SemiBold`, App.tsx'te yüklenir); ölçek `theme.ts` → `Type` |
 | Animasyon | `react-native-reanimated` (satır giriş/çıkış, kart açılışı, takvim genişleme) |
 | Alarm | `expo-notifications` yerel bildirim (Expo Go'da çalışır; web'de `reminders.web.ts` boş) |
 | Haptik | `expo-haptics` (web'de kapalı) |
@@ -67,6 +67,9 @@ src/
     işlenir. Ertelenmiş bildirimin kimliği `snooze-<notId>`'dir; not tamamlanınca/silinince iptal edilir.
 12. **Animasyonlar sakin kalır:** yalnızca hazır reanimated giriş animasyonları (FadeIn/ZoomIn), çıkış (exiting) animasyonu yok;
     web'de özel worklet animasyon kullanılmaz.
+13. **Renk temaları** `theme.ts` → `AccentThemes`; seçim `settings` tablosunda (`accent`) saklanır. Bileşenler yine yalnızca `usePalette()` kullanır.
+14. **Yedek** `services/backup.ts` (saf, testli); arama `services/search.ts`. Satır kaydırma yok: eylemler uzun basma menüsündedir (`RowMenu`),
+    çünkü telefonda yatay kaydırma gün sayfalarına aittir. Sürükle-bırak ve ana ekran widget'ı yapılmadı (Expo Go'da yok / doğrulanamadı).
 
 ## Komutlar
 

@@ -2,6 +2,7 @@
 // fildişi zemin, sıcak gri çizgiler, kil/terrakota vurgu rengi ve tırnaklı (serif) başlıklar.
 // Bileşenlerde sabit renk kodu yazılmaz; usePalette() kullanılır.
 
+import { useSyncExternalStore } from 'react';
 import { Platform, useColorScheme, type TextStyle } from 'react-native';
 
 export interface Palette {
@@ -83,21 +84,23 @@ export function tagColor(tag: string | null | undefined, c: Palette): string | n
   return c.scheme === 'dark' ? t.dark : t.light;
 }
 
-/** Gövde metni sistem yazı tipi; başlıklar sıcak bir tırnaklı yazı tipi (cihazda hazır olan, paket gerekmez) */
+/** Gövde metni sistem yazı tipi */
 const family = Platform.select({
   web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   default: undefined,
 });
+/** Başlık yazı tipi: Fraunces (App.tsx yükler). Yüklenene dek ve yüklenemezse cihazın serif yazı tipi kullanılır. */
+export const SERIF_FONT = 'Fraunces_600SemiBold';
 const serif = Platform.select({
-  ios: 'Georgia',
-  android: 'serif',
-  web: 'Georgia, "Iowan Old Style", "Times New Roman", serif',
+  ios: SERIF_FONT,
+  android: SERIF_FONT,
+  default: `${SERIF_FONT}, Georgia, "Iowan Old Style", "Times New Roman", serif`,
 });
 export const Type = {
-  largeTitle: { fontFamily: serif, fontSize: 32, fontWeight: '600', letterSpacing: -0.4 },
-  title: { fontFamily: serif, fontSize: 21, fontWeight: '600', letterSpacing: -0.2 },
+  largeTitle: { fontFamily: serif, fontSize: 32, letterSpacing: -0.4 },
+  title: { fontFamily: serif, fontSize: 21, letterSpacing: -0.2 },
   /** Gün sütunundaki büyük gün numarası */
-  dayNumber: { fontFamily: serif, fontSize: 22, fontWeight: '600' },
+  dayNumber: { fontFamily: serif, fontSize: 22 },
   body: { fontFamily: family, fontSize: 17, fontWeight: '400', lineHeight: 22 },
   bodyBold: { fontFamily: family, fontSize: 17, fontWeight: '600' },
   sub: { fontFamily: family, fontSize: 15, fontWeight: '400', lineHeight: 20 },
@@ -111,6 +114,60 @@ export const Space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 /** Tabletlerde kenar çubuğu (takvim) ve içerik yan yana dizilir */
 export const WIDE_BREAKPOINT = 820;
 
+/** Vurgu renkleri (ayarlardan seçilir; varsayılan turuncu). Açık ve koyu tema için ayrı tonlar vardır. */
+export const AccentThemes = {
+  turuncu: { label: 'Turuncu', light: '#E4572B', dark: '#FF7A45', softLight: '#FDEBE3', softDark: '#43271B' },
+  mercan: { label: 'Mercan', light: '#E5484D', dark: '#FF6369', softLight: '#FDE8E9', softDark: '#47212A' },
+  orman: { label: 'Orman', light: '#2E8B57', dark: '#4CC38A', softLight: '#E3F4EA', softDark: '#1B3A2B' },
+  deniz: { label: 'Deniz', light: '#2F6FDE', dark: '#5B9BFF', softLight: '#E4EEFD', softDark: '#1B2E4D' },
+  mor: { label: 'Mor', light: '#7C5CD6', dark: '#A18BFF', softLight: '#EEE9FB', softDark: '#2E2650' },
+} as const;
+
+export type AccentKey = keyof typeof AccentThemes;
+export const ACCENT_KEYS = Object.keys(AccentThemes) as AccentKey[];
+export const DEFAULT_ACCENT: AccentKey = 'turuncu';
+
+export function isAccentKey(v: string | null | undefined): v is AccentKey {
+  return Boolean(v) && v! in AccentThemes;
+}
+
+// Seçili vurgu rengi küçük bir dış depodadır; değişince usePalette kullanan her bileşen yenilenir
+let accentKey: AccentKey = DEFAULT_ACCENT;
+const listeners = new Set<() => void>();
+
+export function setAccentKey(key: AccentKey) {
+  if (key === accentKey) return;
+  accentKey = key;
+  listeners.forEach((l) => l());
+}
+
+function useAccentKey(): AccentKey {
+  return useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    () => accentKey,
+    () => DEFAULT_ACCENT,
+  );
+}
+
+const paletteCache = new Map<string, Palette>();
+
+export function paletteFor(scheme: 'light' | 'dark', key: AccentKey): Palette {
+  const id = `${scheme}:${key}`;
+  let p = paletteCache.get(id);
+  if (!p) {
+    const a = AccentThemes[key];
+    const base = scheme === 'dark' ? DarkPalette : LightPalette;
+    const accent = scheme === 'dark' ? a.dark : a.light;
+    p = { ...base, accent, today: accent, accentSoft: scheme === 'dark' ? a.softDark : a.softLight };
+    paletteCache.set(id, p);
+  }
+  return p;
+}
+
 export function usePalette(): Palette {
-  return useColorScheme() === 'dark' ? DarkPalette : LightPalette;
+  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  return paletteFor(scheme, useAccentKey());
 }
