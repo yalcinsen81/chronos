@@ -4,7 +4,7 @@ Haftalık planlayıcı: haftanın her günü, çizgili bir defter sayfası gibi 
 dokun, yaz, Enter'a bas; not o güne eklenir. Tasarım, GitHub'daki
 [weekly-planner](https://github.com/topics/weekly-planner) konusunun en popüler projesi
 [WeekToDo](https://github.com/manuelernestog/weektodo)'dan esinlenir (kodu kopyalanmadı, yalnızca düzen örnek alındı).
-Renkler sıcak bir kağıt havasında: fildişi zemin, kil rengi vurgu, tırnaklı başlıklar.
+Renkler sıcak bir kağıt havasında: sıcak beyaz zemin, canlı turuncu vurgu, tırnaklı başlıklar, bugünün sütunu yumuşak panelde.
 
 | Hafta | Gün (saat çizelgesi) | Telefon, gün | Tekrar ve taşı | Alarmlar | Koyu tema |
 |---|---|---|---|---|---|

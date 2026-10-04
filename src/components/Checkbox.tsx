@@ -1,4 +1,4 @@
-// Not kutucuğu (Things tarzı yuvarlatılmış kare). Etiket rengi verilirse işaretliyken o renge boyanır.
+// Not kutucuğu (yuvarlak). Etiket rengi verilirse işaretliyken o renge boyanır.
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef } from 'react';
@@ -51,7 +51,7 @@ export default function Checkbox({
         accessibilityState={{ checked }}
         style={[
           styles.box,
-          { width: size, height: size, borderRadius: size / 4 },
+          { width: size, height: size, borderRadius: size / 2 },
           { borderColor: checked ? color : c.check },
           checked && { backgroundColor: color },
         ]}

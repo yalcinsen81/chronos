@@ -2,7 +2,7 @@
 
 Haftalık planlayıcı: her gün çizgili satırlı bir sütun; boş satıra dokun, yaz, Enter. Düzen
 [WeekToDo](https://github.com/manuelernestog/weektodo)'dan esinlenir (GPL-3.0; kodu kopyalanmaz, yalnızca düzen).
-Renkler sıcak "kağıt" dilinde (kullanıcı Claude arayüzünün sıcaklığını istedi): fildişi zemin, kil vurgu, serif başlıklar.
+Renkler sıcak "kağıt" dilinde (kullanıcı Claude arayüzünün sıcaklığını istedi): sıcak beyaz zemin, canlı turuncu vurgu (#E4572B), serif başlıklar, yuvarlak kutucuklar, bugünün sütunu yumuşak turuncu panelde.
 Expo SDK 57 + React Native + TypeScript. Expo Go'da çalışır.
 
 > 2026-10-04: Kullanıcı ilk "fiziksel defter" tasarımını (deri kapak, Skia kağıt, el yazısı, sayfa kıvırma,

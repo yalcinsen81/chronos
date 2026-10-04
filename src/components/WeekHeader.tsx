@@ -76,13 +76,9 @@ export default function WeekHeader({
           <Pressable
             onPress={() => selectDate(today)}
             accessibilityRole="button"
-            style={({ pressed }) => [
-              styles.todayBtn,
-              { borderColor: c.separator },
-              pressed && { backgroundColor: c.fill },
-            ]}
+            style={({ pressed }) => [styles.todayBtn, { backgroundColor: c.accentSoft }, pressed && { opacity: 0.7 }]}
           >
-            <Text style={[Type.caption, { color: c.text }]}>Bugün</Text>
+            <Text style={[Type.caption, { color: c.accent, fontWeight: '700' }]}>Bugün</Text>
           </Pressable>
           <IconBtn
             icon="chevron-forward"
@@ -110,12 +106,12 @@ export default function WeekHeader({
                 <Text style={[Type.micro, { color: c.textFaint }]}>
                   {TR_WEEKDAYS_SHORT[i].toLocaleUpperCase('tr-TR')}
                 </Text>
-                <View style={[styles.stripNum, selected && { backgroundColor: isToday ? c.today : c.text }]}>
+                <View style={[styles.stripNum, selected && { backgroundColor: c.accent }]}>
                   <Text
                     style={[
                       Type.bodyBold,
                       {
-                        color: selected ? c.bg : isToday ? c.today : c.text,
+                        color: selected ? c.onAccent : isToday ? c.accent : c.text,
                         fontWeight: selected || isToday ? '700' : '500',
                       },
                     ]}
@@ -196,7 +192,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Space.md,
     height: 30,
     borderRadius: Radius.pill,
-    borderWidth: 1,
     justifyContent: 'center',
   },
   strip: { flexDirection: 'row', paddingHorizontal: Space.sm, paddingBottom: Space.sm },

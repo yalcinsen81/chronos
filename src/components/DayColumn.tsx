@@ -52,44 +52,55 @@ export default function DayColumn({
   };
 
   return (
-    <View style={[styles.column, { width }]}>
+    <View style={[styles.column, { width }, isToday && { backgroundColor: c.accentSoft + '80' }]}>
       <View style={styles.header}>
-        <Pressable
-          onPress={() => showDay(date)}
-          accessibilityRole="button"
-          accessibilityLabel={`${formatWeekday(date)} gününü aç`}
-          style={({ pressed }) => [pressed && { opacity: 0.6 }]}
-        >
-          <View style={styles.titleRow}>
-            <Text style={[Type.title, { color: isToday ? c.accent : isPast ? c.textMuted : c.text }]}>
-              {formatWeekday(date)}
-            </Text>
-            <Ionicons name="expand-outline" size={14} color={c.textFaint} />
+        <View style={styles.headRow}>
+          <Pressable
+            onPress={() => showDay(date)}
+            accessibilityRole="button"
+            accessibilityLabel={`${formatWeekday(date)} gününü aç`}
+            style={({ pressed }) => [styles.headLeft, pressed && { opacity: 0.6 }]}
+          >
+            <View style={styles.titleRow}>
+              <Text style={[Type.micro, styles.weekday, { color: isToday ? c.accent : c.textMuted }]}>
+                {formatWeekday(date).toLocaleUpperCase('tr-TR')}
+              </Text>
+              <Ionicons name="expand-outline" size={12} color={c.textFaint} />
+            </View>
+            <View style={styles.numRow}>
+              <View style={[styles.num, isToday && { backgroundColor: c.accent }]}>
+                <Text style={[Type.dayNumber, { color: isToday ? c.onAccent : isPast ? c.textMuted : c.text }]}>
+                  {d.getDate()}
+                </Text>
+              </View>
+              <Text style={[Type.caption, { color: isToday ? c.accent : c.textMuted }]}>
+                {TR_MONTHS[d.getMonth()]}
+                {isToday ? '  ·  Bugün' : ''}
+              </Text>
+            </View>
+          </Pressable>
+          <View style={styles.headRight}>
+            {isPast && open > 0 ? (
+              <Pressable
+                onPress={() => carryOver(date)}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={`${formatWeekday(date)} günündeki ${open} açık notu bugüne taşı`}
+                style={[styles.carry, { backgroundColor: c.accentSoft }]}
+              >
+                <Ionicons name="arrow-redo-outline" size={12} color={c.accent} />
+                <Text style={[Type.caption, { color: c.accent }]}>{open} açık · bugüne taşı</Text>
+              </Pressable>
+            ) : (
+              notes.length > 0 && (
+                <Text style={[Type.caption, { color: c.textFaint }]}>
+                  {open === 0 ? 'Hepsi bitti' : `${open} açık`}
+                </Text>
+              )
+            )}
           </View>
-        </Pressable>
-        <View style={styles.subRow}>
-          <Text style={[Type.caption, { color: isToday ? c.accent : c.textMuted }]}>
-            {d.getDate()} {TR_MONTHS[d.getMonth()]}
-            {isToday ? '  ·  Bugün' : ''}
-          </Text>
-          {isPast && open > 0 ? (
-            <Pressable
-              onPress={() => carryOver(date)}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel={`${formatWeekday(date)} günündeki ${open} açık notu bugüne taşı`}
-              style={[styles.carry, { backgroundColor: c.accentSoft }]}
-            >
-              <Ionicons name="arrow-redo-outline" size={12} color={c.accent} />
-              <Text style={[Type.caption, { color: c.accent }]}>{open} açık · bugüne taşı</Text>
-            </Pressable>
-          ) : (
-            notes.length > 0 && (
-              <Text style={[Type.caption, { color: c.textFaint }]}>{open === 0 ? 'Hepsi bitti' : `${open} açık`}</Text>
-            )
-          )}
         </View>
-        <View style={[styles.headerRule, { backgroundColor: isToday ? c.accent : c.text }]} />
+        <View style={[styles.headerRule, { backgroundColor: isToday ? c.accent : c.separator }]} />
       </View>
 
       <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -189,8 +200,21 @@ export function TaskLine({ note, onOpen }: { note: EntryWithDate; onOpen: (alarm
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  column: { flex: 1, paddingHorizontal: Space.md },
-  header: { paddingTop: Space.lg, gap: 2 },
+  column: { flex: 1, paddingHorizontal: Space.md, borderRadius: Radius.lg },
+  header: { paddingTop: Space.md },
+  headRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', minHeight: 54 },
+  headLeft: { gap: 2 },
+  headRight: { paddingBottom: 6 },
+  weekday: { letterSpacing: 1.2 },
+  numRow: { flexDirection: 'row', alignItems: 'center', gap: Space.sm },
+  num: {
+    minWidth: 34,
+    height: 34,
+    borderRadius: 17,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   carry: {
     flexDirection: 'row',
@@ -200,7 +224,6 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: Radius.pill,
   },
-  subRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 22 },
   headerRule: { height: 2, marginTop: Space.sm, borderRadius: 1 },
   line: {
     height: LINE_HEIGHT,

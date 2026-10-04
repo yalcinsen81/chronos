@@ -162,11 +162,13 @@ export default function DayView({
                 accessibilityLabel={`${pad(h)}:00 saatine not ekle`}
                 style={({ pressed }) => [
                   styles.hourRow,
-                  { top: (h - start) * HOUR_HEIGHT, height: h === end ? 28 : HOUR_HEIGHT, borderTopColor: c.separator },
+                  { top: (h - start) * HOUR_HEIGHT, height: h === end ? 28 : HOUR_HEIGHT },
                   pressed && { backgroundColor: c.fill },
                 ]}
               >
                 <Text style={[Type.micro, styles.hourLabel, { color: c.textFaint }]}>{pad(h)}:00</Text>
+                {/* Çizgi saat yazısının sağından başlar; yazının üstünden geçmez */}
+                <View style={[styles.hourLine, { backgroundColor: c.separator }]} />
               </Pressable>
             ))}
 
@@ -288,8 +290,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   input: { flex: 1, height: 46, paddingHorizontal: 6 },
-  hourRow: { position: 'absolute', left: 0, right: 0, borderTopWidth: StyleSheet.hairlineWidth },
-  hourLabel: { width: LABEL_W, marginTop: -7, fontVariant: ['tabular-nums'] },
+  hourRow: { position: 'absolute', left: 0, right: 0, borderRadius: Radius.sm },
+  hourLabel: { position: 'absolute', left: 0, top: -6, width: LABEL_W - 10, fontVariant: ['tabular-nums'] },
+  hourLine: { position: 'absolute', top: 0, left: LABEL_W, right: 0, height: StyleSheet.hairlineWidth },
   blocks: { position: 'absolute', top: 0, bottom: 0, left: LABEL_W, right: 0 },
   blockSlot: { position: 'absolute', paddingRight: 4, paddingTop: 2 },
   block: {
@@ -299,7 +302,7 @@ const styles = StyleSheet.create({
     gap: Space.sm,
     paddingHorizontal: Space.sm,
     borderRadius: Radius.md,
-    borderLeftWidth: 3,
+    borderLeftWidth: 4,
   },
   blockText: { flex: 1, minWidth: 0 },
   struck: { textDecorationLine: 'line-through' },
