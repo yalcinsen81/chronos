@@ -149,8 +149,10 @@ interface WeekProps {
 /** Geniş ekran: sütunlar yan yana; ekrana sığmazsa yatay kaydırılır, seçili gün görünür tutulur */
 function WideWeek({ width, days, notes, focus, onOpen }: WeekProps) {
   const ref = useRef<ScrollView>(null);
-  const visible = width >= 1500 ? 7 : width >= 1150 ? 5 : 4;
-  const colW = Math.max(220, Math.floor((width - Space.lg * 2) / visible));
+  // Haftanın 7 günü de görünür; yalnızca dar tabletlerde (sütun 150 pikselin altına düşerse) yatay kaydırılır
+  const avail = width - Space.lg * 2;
+  const visible = Math.min(7, Math.max(4, Math.floor(avail / 150)));
+  const colW = Math.floor(avail / visible);
   const idx = Math.max(0, days.indexOf(focus));
 
   useEffect(() => {
