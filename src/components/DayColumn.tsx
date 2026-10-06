@@ -124,7 +124,7 @@ export default function DayColumn({
                 style={[styles.carry, { backgroundColor: c.accentSoft }]}
               >
                 <Ionicons name="arrow-redo-outline" size={12} color={c.accent} />
-                <Text style={[Type.caption, { color: c.accent }]}>{open} açık · bugüne taşı</Text>
+                <Text style={[Type.caption, { color: c.accent }]}>{open}</Text>
               </Pressable>
             ) : (
               notes.length > 0 && (
@@ -339,8 +339,8 @@ const styles = StyleSheet.create({
   column: { flex: 1, paddingHorizontal: Space.md, borderRadius: Radius.lg },
   header: { paddingTop: Space.md },
   headRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', minHeight: 54 },
-  headLeft: { gap: 2 },
-  headRight: { paddingBottom: 6 },
+  headLeft: { gap: 2, flexShrink: 1, minWidth: 0 },
+  headRight: { paddingBottom: 6, flexShrink: 0 },
   progress: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   weekday: { letterSpacing: 1.2 },
   numRow: { flexDirection: 'row', alignItems: 'center', gap: Space.sm },
