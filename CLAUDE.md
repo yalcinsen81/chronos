@@ -91,6 +91,8 @@ src/
     renkli not varsa çıkar; `tagFilter` AgendaContext'te `weekNotes`'u süzer (veri tabanına dokunmaz).
 23. **Seri sayacı** `services/streak.ts` (saf, testli): tekrar zincirinin üst üste tamamlanan tekrarları (bugünün açık tekrarı seriyi bozmaz).
     `repo.listSeriesHistory` haftadaki zincirleri tek sorguda okur, AgendaContext `streaks` verir; rozet yalnızca bugünün satırında, not kartında "en iyi" ile.
+24. **Yıl ve istatistik** `YearSheet` (⋯ menüsü): `services/stats.ts` (saf, testli) günlük not sayısından yıl ızgarasını (`yearGrid`, hafta başı ayara uyar),
+    koyuluk düzeyini (`heatLevel`) ve özeti (`summarize`: ay/yıl bitenler, en verimli gün, seriler) üretir. Veri `listAll` ile okunur, ayrı sorgu yoktur.
 
 ## Komutlar
 
