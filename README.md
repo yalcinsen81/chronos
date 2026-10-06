@@ -64,6 +64,10 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
 - **Sürükle-bırak (bilgisayar):** hafta görünümünde notu başka günün sütununa, gün görünümünde saat çizelgesinde istediğin saate sürükle (15 dakikaya yuvarlanır, süre korunur; "Geri al" çıkar). Telefonda yerine uzun bas menüsü var.
 - **Klavye kısayolları (bilgisayar):** `n` yeni not, `t` bugün, `←` `→` gün değiştir, `d` gün görünümü, `w` hafta, `z` geri al, `/` ya da `Ctrl+K` ara.
 - **Hafta ve saat:** Ayarlar'dan hafta Pazartesi ya da Pazar başlasın; saatler 24 saat ya da 12 saat (ÖÖ/ÖS) görünsün.
+- **Ay takviminde yoğunluk:** notu çok olan günün dairesi daha koyu görünür.
+- **Haftayı gözden geçir (⋯ menüsü):** haftada kaç not bitti, açık kalanlar; "Hepsini gelecek haftaya taşı" ile aynı güne +7 gün (Geri al çıkar).
+- **Takvim dosyası (.ics):** Ayarlar'dan notları dışa aktar (Google/Apple Takvim'e içe aktar), ya da oradan indirdiğin .ics dosyasını içe aktar. Tek seferliktir, otomatik eşitleme değildir; aynı etkinlik iki kez eklenmez.
+- **İlk açılış:** boş uygulamada 3 maddelik kısa karşılama, "Anladım" ile kapanır.
 - **Görünüm:** Ayarlar → Sistem / Açık / Koyu (elle seçilebilir).
 - **Saf siyah:** Ayarlar'dan koyu temada tam siyah zemin (OLED). Hafta sütun başlığındaki ince çizgi günün doluluğunu gösterir.
 - **Satır sıklığı:** Ayarlar'dan *Rahat* ya da *Sıkı*.

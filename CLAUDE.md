@@ -83,6 +83,8 @@ src/
 20. **Platforma özel yardımcılar** `src/platform/` içindedir (`dnd`, `shortcuts`: web sürümü `.web.ts`, telefonda boş). Sürükle-bırak DOM olaylarıyla yapılır;
     telefonda sürükleme yok (uzun bas menüsü). Hafta başı ve 12/24 saat `services/calendar.ts` içinde modül düzeyinde tutulur (`startOfWeek`, `formatClock`);
     gün adı çözümleme gibi ayardan bağımsız işler `startOfIsoWeek` kullanır.
+21. **.ics** `services/ics.ts` (saf, testli): kendi dışa aktardığı UID `<id>@chronos` aynı kimlikle geri gelir, dışarıdan gelenin kimliği içerikten türetilir
+    (`importEntries` kimliğe göre tekrarı atlar). Çok günlü etkinlik yalnızca ilk güne konur, tekrar kuralı yok sayılır. İlk açılış karşılaması `settings.onboarded`.
 
 ## Komutlar
 

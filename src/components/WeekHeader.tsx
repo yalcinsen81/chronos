@@ -22,6 +22,7 @@ import AlarmButton from './AlarmList';
 import { useShortcutEvent } from '../platform/shortcuts';
 import CalendarView from './CalendarView';
 import PressScale from './PressScale';
+import ReviewSheet from './ReviewSheet';
 import SearchSheet from './SearchSheet';
 import SettingsSheet from './SettingsSheet';
 import TemplatesSheet from './TemplatesSheet';
@@ -43,6 +44,7 @@ export default function WeekHeader({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   useShortcutEvent('search', () => setSearchOpen(true));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [todayOpen, setTodayOpen] = useState(false);
@@ -207,6 +209,7 @@ export default function WeekHeader({
               [
                 { icon: 'search', label: 'Ara', run: () => setSearchOpen(true) },
                 { icon: 'today-outline', label: 'Bugün listesi', run: () => setTodayOpen(true) },
+                { icon: 'checkmark-done-outline', label: 'Haftayı gözden geçir', run: () => setReviewOpen(true) },
                 { icon: 'copy-outline', label: 'Şablonlar', run: () => setTemplatesOpen(true) },
                 { icon: 'settings-outline', label: 'Ayarlar', run: () => setSettingsOpen(true) },
               ] as const
@@ -230,6 +233,7 @@ export default function WeekHeader({
       </Modal>
       <SearchSheet visible={searchOpen} onClose={() => setSearchOpen(false)} onOpenNote={onOpenNote} />
       <TodaySheet visible={todayOpen} onClose={() => setTodayOpen(false)} onOpenNote={onOpenNote} />
+      <ReviewSheet visible={reviewOpen} onClose={() => setReviewOpen(false)} onOpenNote={onOpenNote} />
       <TemplatesSheet visible={templatesOpen} onClose={() => setTemplatesOpen(false)} />
       <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </View>

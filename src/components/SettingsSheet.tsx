@@ -18,6 +18,8 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
     setAccent,
     exportBackup,
     importBackup,
+    exportIcs,
+    importIcs,
     pureBlack,
     setBlack,
     appearance,
@@ -35,6 +37,8 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restoreText, setRestoreText] = useState('');
   const [summaryWarn, setSummaryWarn] = useState<string | null>(null);
+  const [icsOpen, setIcsOpen] = useState(false);
+  const [icsText, setIcsText] = useState('');
   const [status, setStatus] = useState<{ text: string; error?: boolean } | null>(null);
 
   const copy = async () => {
@@ -66,6 +70,47 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
       setRestoreText('');
       setRestoreOpen(false);
     }
+  };
+
+  const exportCalendar = async () => {
+    const ics = await exportIcs();
+    if (Platform.OS === 'web') {
+      const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'chronos.ics';
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus({ text: 'chronos.ics indirildi. Google/Apple Takvim\'de "İçe aktar" ile ekleyebilirsin.' });
+    } else {
+      try {
+        await Share.share({ message: ics, title: 'Chronos takvimi' });
+      } catch {
+        setStatus({ text: 'Paylaşım açılamadı.', error: true });
+      }
+    }
+  };
+
+  const importCalendar = async (text: string) => {
+    const res = await importIcs(text);
+    if ('error' in res) setStatus({ text: res.error, error: true });
+    else {
+      setStatus({ text: res.added ? `${res.added} etkinlik eklendi.` : 'Bu etkinliklerin hepsi zaten var.' });
+      setIcsText('');
+      setIcsOpen(false);
+    }
+  };
+
+  /** Tarayıcıda .ics dosyası seçtirir */
+  const pickIcsFile = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.ics,text/calendar';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (file) await importCalendar(await file.text());
+    };
+    input.click();
   };
 
   const paste = async () => {
@@ -226,6 +271,44 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
                   ara. Notları fareyle günler arasında ya da gün görünümünde saate sürükleyebilirsin.
                 </Text>
               </>
+            )}
+
+            <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>TAKVİM DOSYASI (.ics)</Text>
+            <Text style={[Type.caption, styles.note, { color: c.textMuted }]}>
+              Notların Google ya da Apple Takvim'e aktarılır; oradan indirdiğin .ics dosyasındaki etkinlikler buraya
+              eklenir (tek seferlik, otomatik eşitleme değil).
+            </Text>
+            <View style={styles.btnRow}>
+              <Pill icon="calendar-outline" label="Takvime aktar" onPress={exportCalendar} />
+              {Platform.OS === 'web' && <Pill icon="document-outline" label=".ics dosyası seç" onPress={pickIcsFile} />}
+              <Pill
+                icon="clipboard-outline"
+                label="Metin yapıştır"
+                onPress={() => setIcsOpen((v) => !v)}
+                active={icsOpen}
+              />
+            </View>
+            {icsOpen && (
+              <Animated.View entering={FadeInDown.duration(160)} style={styles.restore}>
+                <TextInput
+                  value={icsText}
+                  onChangeText={setIcsText}
+                  multiline
+                  placeholder="BEGIN:VCALENDAR ile başlayan metni yapıştır"
+                  placeholderTextColor={c.textFaint}
+                  style={[Type.caption, styles.area, webNoOutline, { color: c.text, backgroundColor: c.fill }]}
+                  accessibilityLabel="İçe aktarılacak takvim metni"
+                />
+                <View style={styles.btnRow}>
+                  <Pill
+                    icon="checkmark"
+                    label="İçe aktar"
+                    onPress={() => importCalendar(icsText)}
+                    primary
+                    disabled={!icsText.trim()}
+                  />
+                </View>
+              </Animated.View>
             )}
 
             <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>YEDEK</Text>

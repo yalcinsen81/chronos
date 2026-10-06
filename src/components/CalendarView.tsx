@@ -24,6 +24,9 @@ import {
 import { useAgenda } from '../state/AgendaContext';
 import TodayPulse from './TodayPulse';
 
+/** Gün başına not sayısına göre daire koyuluğu (onaltılık alfa) */
+const DENSITY = ['00', '1C', '30', '45', '5A', '70'];
+
 export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMonth?: boolean; onPick?: () => void }) {
   const c = usePalette();
   const { date, selectDate, repo, notebookId, revision } = useAgenda();
@@ -125,6 +128,8 @@ export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMo
                   <View
                     style={[
                       styles.circle,
+                      // Not sayısı arttıkça gün dairesi koyulaşır (en çok 5 kademe)
+                      has && !selected && { backgroundColor: c.accent + DENSITY[Math.min(5, counts[cell.iso] ?? 0)] },
                       cell.isToday && !selected && { backgroundColor: c.accentSoft },
                       selected && { backgroundColor: c.accent },
                     ]}
@@ -141,12 +146,7 @@ export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMo
                       {cell.day}
                     </Text>
                   </View>
-                  <View
-                    style={[
-                      styles.dot,
-                      { backgroundColor: has ? c.accent : 'transparent', opacity: cell.inMonth ? 0.55 : 0.25 },
-                    ]}
-                  />
+                  <View style={styles.dot} />
                 </Pressable>
               );
             })}
@@ -204,5 +204,5 @@ const styles = StyleSheet.create({
   cell: { flex: 1, alignItems: 'center', paddingTop: 2, paddingBottom: 4 },
   circle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   num: { fontSize: 17, fontVariant: ['tabular-nums'] },
-  dot: { width: 5, height: 5, borderRadius: 3, marginTop: 3 },
+  dot: { width: 5, height: 5, marginTop: 3 },
 });

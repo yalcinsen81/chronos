@@ -16,6 +16,7 @@ import {
   type Appearance,
 } from '../constants/theme';
 import { buildBackup, parseBackup } from '../services/backup';
+import { buildIcs, parseIcs } from '../services/ics';
 import { haptics } from '../services/haptics';
 import {
   cancelReminder,
@@ -128,6 +129,14 @@ interface AgendaState {
   setSummaryHour: (hour: number | null) => Promise<boolean>;
   /** Tüm notları yedek metni (JSON) olarak verir */
   exportBackup: () => Promise<string>;
+  /** Takvim dosyası (.ics) */
+  exportIcs: () => Promise<string>;
+  importIcs: (text: string) => Promise<{ added: number } | { error: string }>;
+  /** Her nota ayrı hedef gün verilir; tek bir "Geri al" ile hepsi eski yerine döner */
+  moveEach: (moves: { id: string; to: ISODate }[]) => Promise<void>;
+  /** İlk açılış karşılaması gösterildi mi */
+  onboarded: boolean;
+  finishOnboarding: () => Promise<void>;
   /** Yedek metnini içe aktarır; var olan notlara dokunmaz. Eklenen not sayısını ya da hata iletisini döner. */
   importBackup: (json: string) => Promise<{ added: number } | { error: string }>;
   /** Tüm notlar (arama için) */
@@ -580,6 +589,63 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
 
   const exportBackup = useCallback(async () => JSON.stringify(buildBackup(await listAll()), null, 1), [listAll]);
 
+  const exportIcs = useCallback(async () => buildIcs(await listAll()), [listAll]);
+
+  const importIcs = useCallback(
+    async (text: string) => {
+      if (!notebookId) return { error: 'Veri tabanı hazır değil.' };
+      const events = parseIcs(text);
+      if (!events.length) return { error: 'Dosyada etkinlik bulunamadı.' };
+      const now = Date.now();
+      const added = await repo.importEntries(
+        notebookId,
+        events.map((e, i) => ({
+          id: e.id,
+          date: e.date,
+          time: e.time,
+          end: e.endTime,
+          text: e.text,
+          done: false,
+          color: null,
+          reminder: null,
+          repeat: null,
+          series: null,
+          created: now + i,
+        })),
+      );
+      bump();
+      return { added: added.length };
+    },
+    [repo, notebookId, bump],
+  );
+
+  const moveEach = useCallback(
+    async (moves: { id: string; to: ISODate }[]) => {
+      const back = await relocate(moves);
+      if (back?.length) offerUndo(`${back.length} not taşındı`, async () => void (await relocate(back)));
+    },
+    [relocate, offerUndo],
+  );
+
+  const [onboarded, setOnboarded] = useState(true);
+  useEffect(() => {
+    if (!ready) return;
+    (async () => {
+      if ((await repo.getSetting('onboarded')) === '1') return setOnboarded(true);
+      // Notu olan (eski) kullanıcıya karşılama gösterilmez
+      const any = notebookId ? (await repo.listAllEntries(notebookId)).length > 0 : false;
+      if (any) {
+        await repo.setSetting('onboarded', '1');
+        return setOnboarded(true);
+      }
+      setOnboarded(false);
+    })();
+  }, [repo, ready, notebookId]);
+  const finishOnboarding = useCallback(async () => {
+    setOnboarded(true);
+    await repo.setSetting('onboarded', '1');
+  }, [repo]);
+
   const importBackup = useCallback(
     async (json: string) => {
       if (!notebookId) return { error: 'Veri tabanı hazır değil.' };
@@ -650,6 +716,11 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     setSummaryHour,
     exportBackup,
     importBackup,
+    exportIcs,
+    importIcs,
+    moveEach,
+    onboarded,
+    finishOnboarding,
     listAll,
     view,
     menuNote,
