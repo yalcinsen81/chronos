@@ -89,6 +89,8 @@ src/
     tarih gelince `BackupNudge` şeridi çıkar; yedek alınca +7, "Sonra" +2. Web'de yedek `.json` dosyası olarak iner (`saveBackup.ts`).
     **Etiket adları** `settings.tagNames` (JSON, `services/tagNames.ts`); renk anahtarı değişmez, yalnızca görünen ad. `TagFilterBar` haftada
     renkli not varsa çıkar; `tagFilter` AgendaContext'te `weekNotes`'u süzer (veri tabanına dokunmaz).
+23. **Seri sayacı** `services/streak.ts` (saf, testli): tekrar zincirinin üst üste tamamlanan tekrarları (bugünün açık tekrarı seriyi bozmaz).
+    `repo.listSeriesHistory` haftadaki zincirleri tek sorguda okur, AgendaContext `streaks` verir; rozet yalnızca bugünün satırında, not kartında "en iyi" ile.
 
 ## Komutlar
 

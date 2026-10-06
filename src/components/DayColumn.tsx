@@ -16,6 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { MIN_VISIBLE_STREAK } from '../services/streak';
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
 import { formatClock, formatWeekday, fromISODate, todayISO, TR_MONTHS, type ISODate } from '../services/calendar';
@@ -241,7 +242,9 @@ export function TaskLine({
   index?: number; // sıra: satırlar sırayla (kademeli) belirir
 }) {
   const c = usePalette();
-  const { toggleNote, openMenu, density, selection, toggleSelect, selecting } = useAgenda();
+  const { toggleNote, openMenu, density, selection, toggleSelect, selecting, streaks } = useAgenda();
+  // Rozet yalnızca bugünün tekrarında görünür; diğer günlerde aynı sayı tekrar tekrar çıkmasın
+  const streak = note.series_id && note.date === todayISO() ? (streaks[note.series_id]?.current ?? 0) : 0;
   const dragRef = useDragSource(note.id);
   const selected = selection.includes(note.id);
   const { title, body } = splitNote(note.text_content);
@@ -304,7 +307,14 @@ export function TaskLine({
             </Text>
           )}
           {Boolean(title && body) && <Ionicons name="document-text-outline" size={14} color={c.textFaint} />}
-          {note.repeat && <Ionicons name="repeat" size={14} color={c.textFaint} accessibilityLabel="Tekrarlanıyor" />}
+          {note.repeat && streak >= MIN_VISIBLE_STREAK ? (
+            <View style={styles.streak} accessibilityLabel={`${streak} tekrardır aksatmadın`}>
+              <Ionicons name="flame" size={13} color={c.accent} />
+              <Text style={[Type.micro, { color: c.accent }]}>{streak}</Text>
+            </View>
+          ) : (
+            note.repeat && <Ionicons name="repeat" size={14} color={c.textFaint} accessibilityLabel="Tekrarlanıyor" />
+          )}
           {/* Saati olan notta zil her zaman görünür: tek dokunuşla alarm kurulur */}
           {!done && (alarm || note.time_slot) && (
             <Pressable
@@ -325,6 +335,7 @@ export function TaskLine({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   column: { flex: 1, paddingHorizontal: Space.md, borderRadius: Radius.lg },
   header: { paddingTop: Space.md },
   headRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', minHeight: 54 },

@@ -18,6 +18,7 @@ import { remindersSupported, requestReminderPermission } from '../services/remin
 import { addDays, todayISO, type ISODate } from '../services/calendar';
 import { REMINDER_OPTIONS, reminderLabel } from '../services/reminderTime';
 import { REPEAT_OPTIONS, repeatLabel } from '../services/recurrence';
+import { MIN_VISIBLE_STREAK } from '../services/streak';
 import { tagLabel } from '../services/tagNames';
 import { useAgenda } from '../state/AgendaContext';
 import Checkbox from './Checkbox';
@@ -46,7 +47,8 @@ export default function NoteEditor({
   onClose: () => void;
 }) {
   const c = usePalette();
-  const { saveNote, deleteNote, toggleNote, moveNote, tagNames } = useAgenda();
+  const { saveNote, deleteNote, toggleNote, moveNote, tagNames, streaks } = useAgenda();
+  const streak = note?.series_id ? streaks[note.series_id] : undefined;
   const initial = note ? splitNote(note.text_content) : { title: '', body: '' };
   const [title, setTitle] = useState(initial.title);
   const initialBody = splitChecklist(initial.body);
@@ -389,6 +391,18 @@ export default function NoteEditor({
           })}
         </Animated.View>
       )}
+      {streak && streak.best >= MIN_VISIBLE_STREAK && (
+        <View style={styles.streakRow}>
+          <Ionicons name="flame" size={16} color={c.accent} />
+          <Text style={[Type.caption, { color: c.textMuted }]}>
+            {streak.current >= MIN_VISIBLE_STREAK
+              ? `${streak.current} tekrardır aksatmadın`
+              : 'Seri bozuldu, yeniden başla'}
+            {` · en iyi ${streak.best}`}
+          </Text>
+        </View>
+      )}
+
       {repeatOpen && (
         <Animated.View entering={FadeInDown.duration(160)} style={styles.alarmOptions}>
           {[{ rule: null as string | null, label: 'Tekrar yok' }, ...REPEAT_OPTIONS].map((o) => {
@@ -561,6 +575,13 @@ const styles = StyleSheet.create({
   },
   hint: { paddingHorizontal: Space.lg, paddingBottom: Space.md, fontWeight: '400' },
   timeInput: { width: 52, paddingVertical: 0, fontVariant: ['tabular-nums'] },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Space.lg,
+    paddingBottom: Space.sm,
+  },
   tags: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   tagRing: {
     width: 30,

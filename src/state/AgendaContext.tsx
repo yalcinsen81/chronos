@@ -16,6 +16,7 @@ import {
   type Appearance,
 } from '../constants/theme';
 import { buildBackup, parseBackup } from '../services/backup';
+import { computeStreak, type Streak } from '../services/streak';
 import { parseTagNames, withTagName, type TagNames } from '../services/tagNames';
 import {
   BACKUP_MIN_NOTES,
@@ -84,6 +85,8 @@ interface AgendaState {
   weekNotes: Record<ISODate, EntryWithDate[]>;
   /** Kullanıcının renklere verdiği adlar (yoksa varsayılan renk adı kullanılır) */
   tagNames: TagNames;
+  /** Haftadaki tekrarlayan notların serileri (zincir kimliği → seri) */
+  streaks: Record<string, Streak>;
   setTagName: (key: string, name: string) => Promise<void>;
   /** Seçiliyse yalnızca bu renkteki notlar gösterilir */
   tagFilter: string | null;
@@ -171,6 +174,7 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   const [notebookId, setNotebookId] = useState<string | null>(null);
   const [date, setDate] = useState<ISODate>(todayISO());
   const [allWeekNotes, setWeekNotes] = useState<Record<ISODate, EntryWithDate[]>>({});
+  const [streaks, setStreaks] = useState<Record<string, Streak>>({});
   const [tagNames, setTagNames] = useState<TagNames>({});
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const weekNotes = useMemo(() => {
@@ -281,6 +285,11 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
       const byDay: Record<ISODate, EntryWithDate[]> = {};
       for (const e of list) (byDay[e.date as ISODate] ??= []).push(e);
       setWeekNotes(byDay);
+      const ids = [...new Set(list.filter((e) => e.repeat && e.series_id).map((e) => e.series_id as string))];
+      const history = await repo.listSeriesHistory(ids, todayISO());
+      if (cancelled) return;
+      const today = todayISO();
+      setStreaks(Object.fromEntries(ids.map((id) => [id, computeStreak(history[id] ?? [], today)])));
     })().catch((e) => console.error('Notlar yüklenemedi', e));
     return () => {
       cancelled = true;
@@ -748,6 +757,7 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     weekDays,
     weekNotes,
     tagNames,
+    streaks,
     setTagName,
     tagFilter,
     setTagFilter,

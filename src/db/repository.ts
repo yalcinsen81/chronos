@@ -287,6 +287,25 @@ export function createRepository(db: SqlDriver) {
     return rows.map(toEntry);
   }
 
+  /** Verilen zincirlerin bugüne kadarki tüm tekrarları (seri hesabı için): zincir kimliği → tarih/tamamlanma */
+  async function listSeriesHistory(
+    seriesIds: string[],
+    upTo: ISODate,
+  ): Promise<Record<string, { date: ISODate; done: boolean }[]>> {
+    const out: Record<string, { date: ISODate; done: boolean }[]> = {};
+    if (!seriesIds.length) return out;
+    const marks = seriesIds.map(() => '?').join(',');
+    const rows = await db.execute(
+      `SELECT e.series_id AS sid, p.date AS date, e.is_completed AS done
+       FROM entries e JOIN pages p ON p.id = e.page_id
+       WHERE e.series_id IN (${marks}) AND p.date IS NOT NULL AND p.date <= ?
+       ORDER BY p.date`,
+      [...seriesIds, upTo],
+    );
+    for (const r of rows) (out[String(r.sid)] ??= []).push({ date: String(r.date) as ISODate, done: Boolean(r.done) });
+    return out;
+  }
+
   /**
    * Notun tekrarını değiştirir (null = durdur). Bu nottan sonraki, tamamlanmamış tekrarlar silinir; yeni kural
    * ilk nottan sonrası için yeniden üretilir. Silinen notların bildirim kimliklerini döner (iptal edilsin).
@@ -412,6 +431,7 @@ export function createRepository(db: SqlDriver) {
     getEntry,
     listEntriesWithReminder,
     listSeriesTails,
+    listSeriesHistory,
     changeSeries,
     getSetting,
     setSetting,
