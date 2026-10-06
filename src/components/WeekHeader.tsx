@@ -7,10 +7,19 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { Radius, Space, Type, usePalette, WIDE_BREAKPOINT } from '../constants/theme';
-import { addDays, fromISODate, isoWeekNumber, todayISO, TR_MONTHS, TR_WEEKDAYS_SHORT } from '../services/calendar';
+import {
+  addDays,
+  fromISODate,
+  isoWeekNumber,
+  todayISO,
+  TR_MONTHS,
+  TR_WEEKDAYS_SHORT,
+  weekdayIndex,
+} from '../services/calendar';
 import { useAgenda } from '../state/AgendaContext';
 import type { EntryWithDate } from '../db/repository';
 import AlarmButton from './AlarmList';
+import { useShortcutEvent } from '../platform/shortcuts';
 import CalendarView from './CalendarView';
 import PressScale from './PressScale';
 import SearchSheet from './SearchSheet';
@@ -34,6 +43,7 @@ export default function WeekHeader({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  useShortcutEvent('search', () => setSearchOpen(true));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [todayOpen, setTodayOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -76,7 +86,7 @@ export default function WeekHeader({
                 </Text>
                 <Ionicons name="chevron-down" size={16} color={c.accent} />
               </View>
-              <Text style={[Type.caption, { color: c.textMuted }]}>{isoWeekNumber(weekStart)}. hafta</Text>
+              <Text style={[Type.caption, { color: c.textMuted }]}>{isoWeekNumber(addDays(weekStart, 3))}. hafta</Text>
             </View>
           </Pressable>
         )}
@@ -141,7 +151,7 @@ export default function WeekHeader({
                 accessibilityState={{ selected }}
               >
                 <Text style={[Type.micro, { color: c.textFaint }]}>
-                  {TR_WEEKDAYS_SHORT[i].toLocaleUpperCase('tr-TR')}
+                  {TR_WEEKDAYS_SHORT[weekdayIndex(d)].toLocaleUpperCase('tr-TR')}
                 </Text>
                 <Animated.View
                   key={selected ? 'on' : 'off'}

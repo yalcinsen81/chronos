@@ -17,7 +17,7 @@ import {
   startOfWeek,
   todayISO,
   TR_MONTHS,
-  TR_WEEKDAYS_SHORT,
+  weekdayLabels,
   type DayCell,
   type ISODate,
 } from '../services/calendar';
@@ -41,7 +41,13 @@ export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMo
     const today = todayISO();
     return Array.from({ length: 7 }, (_, i): DayCell => {
       const iso = addDays(start, i);
-      return { iso, day: fromISODate(iso).getDate(), inMonth: true, isToday: iso === today, isWeekend: i >= 5 };
+      return {
+        iso,
+        day: fromISODate(iso).getDate(),
+        inMonth: true,
+        isToday: iso === today,
+        isWeekend: [0, 6].includes(fromISODate(iso).getDay()),
+      };
     });
   }, [anchor]);
 
@@ -91,7 +97,7 @@ export default function CalendarView({ alwaysMonth = false, onPick }: { alwaysMo
       </View>
 
       <View style={styles.row}>
-        {TR_WEEKDAYS_SHORT.map((w) => (
+        {weekdayLabels().map((w) => (
           <Text key={w} style={[Type.micro, styles.weekday, { color: c.textFaint }]}>
             {w.toLocaleUpperCase('tr-TR')}
           </Text>

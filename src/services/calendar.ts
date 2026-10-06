@@ -79,8 +79,41 @@ export function weekdayIndex(iso: ISODate): number {
   return (fromISODate(iso).getDay() + 6) % 7;
 }
 
+// Ayarlardan: hafta Pazartesi (varsayılan) ya da Pazar günü başlar. 12/24 saat gösterimi de burada tutulur.
+let sundayFirst = false;
+let clock12 = false;
+export function setWeekStartsOnSunday(on: boolean) {
+  sundayFirst = on;
+}
+export function setClock12(on: boolean) {
+  clock12 = on;
+}
+
+/** Haftanın ilk gününden bu yana geçen gün (ayara göre) */
+export function weekOffset(iso: ISODate): number {
+  return sundayFirst ? fromISODate(iso).getDay() : weekdayIndex(iso);
+}
+
+/** Haftanın başlangıcı (ayara göre Pazartesi ya da Pazar) */
 export function startOfWeek(iso: ISODate): ISODate {
+  return addDays(iso, -weekOffset(iso));
+}
+
+/** Her zaman Pazartesi (ISO haftası): gün adı çözümleme gibi ayardan bağımsız işler için */
+export function startOfIsoWeek(iso: ISODate): ISODate {
   return addDays(iso, -weekdayIndex(iso));
+}
+
+/** "14:30" → ayara göre "14:30" ya da "2:30 ÖS" */
+export function formatClock(hhmm: string): string {
+  if (!clock12) return hhmm;
+  const [h, m] = hhmm.split(':').map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'ÖÖ' : 'ÖS'}`;
+}
+
+/** Hafta başlığındaki kısa gün adları, haftanın ilk gününden başlar */
+export function weekdayLabels(): readonly string[] {
+  return sundayFirst ? [TR_WEEKDAYS_SHORT[6], ...TR_WEEKDAYS_SHORT.slice(0, 6)] : TR_WEEKDAYS_SHORT;
 }
 
 export function startOfMonth(iso: ISODate): ISODate {
@@ -130,7 +163,7 @@ export function getMonthMatrix(year: number, month: number, today: ISODate = tod
         day: d.getDate(),
         inMonth: d.getMonth() === month,
         isToday: cursor === today,
-        isWeekend: i >= 5,
+        isWeekend: d.getDay() === 0 || d.getDay() === 6,
       });
       cursor = addDays(cursor, 1);
     }

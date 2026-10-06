@@ -21,7 +21,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Space, usePalette, WIDE_BREAKPOINT } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
-import type { ISODate } from '../services/calendar';
+import { addDays, todayISO, type ISODate } from '../services/calendar';
+import { useGlobalShortcuts } from '../platform/shortcuts';
 import { useAgenda } from '../state/AgendaContext';
 import DayColumn from './DayColumn';
 import DayView from './DayView';
@@ -36,7 +37,16 @@ export default function AgendaScreen() {
   const c = usePalette();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
-  const { date, weekStart, weekDays, weekNotes, selectDate, view, menuNote, selecting } = useAgenda();
+  const { date, weekStart, weekDays, weekNotes, selectDate, view, menuNote, selecting, showDay, showWeek, runUndo } =
+    useAgenda();
+  useGlobalShortcuts({
+    today: () => selectDate(todayISO()),
+    prev: () => selectDate(addDays(date, -1)),
+    next: () => selectDate(addDays(date, 1)),
+    day: () => showDay(date),
+    week: showWeek,
+    undo: () => void runUndo(),
+  });
   const [openNote, setOpenNote] = useState<EntryWithDate | null>(null);
   const [alarmFirst, setAlarmFirst] = useState(false);
   const [draft, setDraft] = useState<NoteDraft | null>(null);

@@ -8,7 +8,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
-import { addDays, formatWeekday, fromISODate, todayISO, TR_MONTHS } from '../services/calendar';
+import { addDays, formatClock, formatWeekday, fromISODate, todayISO, TR_MONTHS } from '../services/calendar';
 import { splitNote } from '../services/notes';
 import { reminderLabel, upcomingAlarms } from '../services/reminderTime';
 import { useAgenda } from '../state/AgendaContext';
@@ -112,7 +112,9 @@ export default function AlarmButton({ onOpenNote }: { onOpenNote: (n: EntryWithD
                         ]}
                       >
                         <View style={[styles.stripe, { backgroundColor: tagColor(a.color, c) ?? c.accent }]} />
-                        <Text style={[Type.bodyBold, styles.time, { color: c.accent }]}>{a.time_slot}</Text>
+                        <Text style={[Type.bodyBold, styles.time, { color: c.accent }]}>
+                          {formatClock(a.time_slot ?? '')}
+                        </Text>
                         <View style={styles.flex}>
                           <Text numberOfLines={1} style={[Type.sub, { color: c.text }]}>
                             {title || body}

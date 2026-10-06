@@ -80,6 +80,9 @@ src/
     Bugün listesi `TodaySheet` (son 60 gün geciken + bugün). Koyu temada "saf siyah" `settings.pureBlack`, `paletteFor(..., black)`.
 19. **PWA:** `scripts/build-web-preview.mjs` manifest, `sw.js` (içerik listesi derleme sırasında üretilir) ve `<head>` etiketlerini ekler;
     simgeler `public/icons/`. Web verisi localStorage'dadır (cihazlar arası senkron yok), web'de alarm yok.
+20. **Platforma özel yardımcılar** `src/platform/` içindedir (`dnd`, `shortcuts`: web sürümü `.web.ts`, telefonda boş). Sürükle-bırak DOM olaylarıyla yapılır;
+    telefonda sürükleme yok (uzun bas menüsü). Hafta başı ve 12/24 saat `services/calendar.ts` içinde modül düzeyinde tutulur (`startOfWeek`, `formatClock`);
+    gün adı çözümleme gibi ayardan bağımsız işler `startOfIsoWeek` kullanır.
 
 ## Komutlar
 

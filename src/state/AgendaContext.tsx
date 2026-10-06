@@ -6,7 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { SqlDriver } from '../db/driver';
 import { migrate } from '../db/migrate';
 import { createRepository, type EntryWithDate, type Repository } from '../db/repository';
-import { addDays, startOfWeek, todayISO, type ISODate } from '../services/calendar';
+import { addDays, setClock12, setWeekStartsOnSunday, startOfWeek, todayISO, type ISODate } from '../services/calendar';
 import {
   setAccentKey,
   setAppearance,
@@ -28,6 +28,7 @@ import {
 } from '../services/reminders';
 import { materializeSeries } from '../services/series';
 import { splitNote } from '../services/notes';
+import { timeToMinutes } from '../services/dayLayout';
 
 /** Son işlemi geri alan toast (silme, tamamlama, taşıma) */
 export interface UndoAction {
@@ -86,6 +87,8 @@ interface AgendaState {
   showWeek: () => void;
   /** Notu başka güne taşır (alarmı yeni güne göre yeniden kurulur) */
   moveNote: (id: string, date: ISODate) => Promise<void>;
+  /** Sürükle-bırak: günü ve/veya başlangıç saatini değiştirir (süre korunur) */
+  reschedule: (id: string, to: { date?: ISODate; time?: string }) => Promise<void>;
   /** Birkaç notu birden taşır (geri alınabilir) */
   moveNotes: (ids: string[], date: ISODate) => Promise<void>;
   /** O günün tamamlanmamış notlarını bugüne aktarır */
@@ -106,6 +109,11 @@ interface AgendaState {
   bulkComplete: () => Promise<void>;
   bulkMove: (target: ISODate) => Promise<void>;
   bulkDelete: () => Promise<void>;
+  /** Hafta başlangıcı ('mon' | 'sun') ve saat gösterimi ('24' | '12') */
+  weekStartsOn: 'mon' | 'sun';
+  setWeekStartsOn: (v: 'mon' | 'sun') => Promise<void>;
+  clock: '24' | '12';
+  setClock: (v: '24' | '12') => Promise<void>;
   /** Görünüm: sistem / açık / koyu */
   appearance: Appearance;
   setAppearanceMode: (mode: Appearance) => Promise<void>;
@@ -146,6 +154,8 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   const [selection, setSelection] = useState<string[]>([]);
   const [pureBlack, setPureBlackState] = useState(false);
   const [appearance, setAppearanceState] = useState<Appearance>('system');
+  const [weekStartsOn, setWeekStartsOnState] = useState<'mon' | 'sun'>('mon');
+  const [clock, setClockState] = useState<'24' | '12'>('24');
   const [density, setDensityState] = useState<Density>('rahat');
   const [summaryHour, setSummaryHourState] = useState<number | null>(null);
   const [menuNote, setMenuNote] = useState<EntryWithDate | null>(null);
@@ -183,6 +193,14 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
       if (isAccentKey(savedAccent)) {
         setAccentKey(savedAccent);
         setAccentState(savedAccent);
+      }
+      if ((await repo.getSetting('weekStart')) === 'sun') {
+        setWeekStartsOnSunday(true);
+        setWeekStartsOnState('sun');
+      }
+      if ((await repo.getSetting('clock')) === '12') {
+        setClock12(true);
+        setClockState('12');
       }
       const savedMode = await repo.getSetting('appearance');
       if (savedMode === 'light' || savedMode === 'dark') {
@@ -391,6 +409,33 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     [relocate, offerUndo],
   );
 
+  const reschedule = useCallback(
+    async (id: string, to: { date?: ISODate; time?: string }) => {
+      const e = await repo.getEntry(id);
+      if (!e) return;
+      const prev = { date: e.date, time: e.time_slot, end: e.end_time };
+      const apply = async (date: ISODate | null, time: string | null, end: string | null) => {
+        await repo.updateEntry(id, e.text_content, time);
+        await repo.setEntryEndTime(id, time ? end : null);
+        if (date && date !== (await repo.getEntry(id))?.date && notebookId)
+          await repo.moveEntryToDate(notebookId, id, date);
+        await syncReminder(id);
+        haptics.tap();
+        bump();
+      };
+      let end = prev.end;
+      if (to.time && prev.time && prev.end) {
+        // Süre korunur: bitiş, başlangıçla aynı miktarda kayar (gün sonunu aşmaz)
+        const shift = timeToMinutes(to.time) - timeToMinutes(prev.time);
+        const m = timeToMinutes(prev.end) + shift;
+        end = m < 24 * 60 ? `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}` : null;
+      }
+      await apply(to.date ?? prev.date, to.time ?? prev.time, to.time ? end : prev.end);
+      offerUndo('Taşındı', () => apply(prev.date, prev.time, prev.end));
+    },
+    [repo, notebookId, bump, syncReminder, offerUndo],
+  );
+
   const moveNotes = useCallback(
     async (ids: string[], target: ISODate) => {
       const back = await relocate(ids.map((id) => ({ id, to: target })));
@@ -451,6 +496,23 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
       setAccentState(key);
       haptics.select();
       await repo.setSetting('accent', key);
+    },
+    [repo],
+  );
+
+  const setWeekStartsOn = useCallback(
+    async (v: 'mon' | 'sun') => {
+      setWeekStartsOnSunday(v === 'sun');
+      setWeekStartsOnState(v);
+      await repo.setSetting('weekStart', v);
+    },
+    [repo],
+  );
+  const setClock = useCallback(
+    async (v: '24' | '12') => {
+      setClock12(v === '12');
+      setClockState(v);
+      await repo.setSetting('clock', v);
     },
     [repo],
   );
@@ -565,6 +627,10 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     setAccent,
     appearance,
     setAppearanceMode,
+    weekStartsOn,
+    setWeekStartsOn,
+    clock,
+    setClock,
     pureBlack,
     setBlack,
     undo,
@@ -593,6 +659,7 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     showDay,
     showWeek,
     moveNote,
+    reschedule,
     moveNotes,
     carryOver,
     saveNote,

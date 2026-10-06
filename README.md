@@ -61,6 +61,9 @@ Telefon ve bilgisayar aynı Wi-Fi ağında olmalı. Olmuyorsa `npx expo start --
 - **Bugün listesi (⋯ menüsü):** geciken (son 60 gün) ve bugünkü açık notlar tek listede; her birini *Bugüne / Yarına* al ya da "Hepsini bugüne al".
 - **Şablonlar (⋯ menüsü):** sık kullanılan listeleri (ör. alışveriş, sabah rutini) kaydet; seçili güne alt görevleriyle eklenir.
 - **Bağlantılar:** notta `https://...` varsa kartta çip olarak görünür, dokununca açılır.
+- **Sürükle-bırak (bilgisayar):** hafta görünümünde notu başka günün sütununa, gün görünümünde saat çizelgesinde istediğin saate sürükle (15 dakikaya yuvarlanır, süre korunur; "Geri al" çıkar). Telefonda yerine uzun bas menüsü var.
+- **Klavye kısayolları (bilgisayar):** `n` yeni not, `t` bugün, `←` `→` gün değiştir, `d` gün görünümü, `w` hafta, `z` geri al, `/` ya da `Ctrl+K` ara.
+- **Hafta ve saat:** Ayarlar'dan hafta Pazartesi ya da Pazar başlasın; saatler 24 saat ya da 12 saat (ÖÖ/ÖS) görünsün.
 - **Görünüm:** Ayarlar → Sistem / Açık / Koyu (elle seçilebilir).
 - **Saf siyah:** Ayarlar'dan koyu temada tam siyah zemin (OLED). Hafta sütun başlığındaki ince çizgi günün doluluğunu gösterir.
 - **Satır sıklığı:** Ayarlar'dan *Rahat* ya da *Sıkı*.

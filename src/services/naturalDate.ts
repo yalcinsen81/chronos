@@ -2,7 +2,7 @@
 // Metnin başındaki ya da sonundaki gün ifadesi tarihe, saat ifadesi saate çevrilir; kalan metin not olur.
 // Saf fonksiyon: bugünün tarihi dışarıdan verilir (testlenebilir).
 
-import { addDays, startOfWeek, toISODate, todayISO, type ISODate } from './calendar';
+import { addDays, startOfIsoWeek, toISODate, todayISO, type ISODate } from './calendar';
 import { parseNote } from './notes';
 
 export interface SmartNote {
@@ -51,7 +51,7 @@ const PHRASES: { re: string; resolve: Resolver }[] = [
     re: `(haftaya |gelecek |onumuzdeki )?(${WEEKDAYS.join('|')})`,
     resolve: (m, t) => {
       const idx = WEEKDAYS.indexOf(m[2]);
-      if (m[1]) return addDays(startOfWeek(t), 7 + idx);
+      if (m[1]) return addDays(startOfIsoWeek(t), 7 + idx);
       const todayIdx = (new Date(`${t}T00:00:00`).getDay() + 6) % 7;
       return addDays(t, (idx - todayIdx + 7) % 7);
     },

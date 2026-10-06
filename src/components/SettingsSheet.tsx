@@ -22,6 +22,10 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
     setBlack,
     appearance,
     setAppearanceMode,
+    weekStartsOn,
+    setWeekStartsOn,
+    clock,
+    setClock,
     density,
     setDensity,
     summaryHour,
@@ -143,6 +147,31 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
               />
             </View>
 
+            <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>HAFTA VE SAAT</Text>
+            <View style={styles.btnRow}>
+              <Pill
+                icon="calendar-outline"
+                label="Hafta Pazartesi başlar"
+                active={weekStartsOn === 'mon'}
+                onPress={() => setWeekStartsOn('mon')}
+              />
+              <Pill
+                icon="calendar-outline"
+                label="Pazar başlar"
+                active={weekStartsOn === 'sun'}
+                onPress={() => setWeekStartsOn('sun')}
+              />
+            </View>
+            <View style={styles.btnRow}>
+              <Pill icon="time-outline" label="24 saat" active={clock === '24'} onPress={() => setClock('24')} />
+              <Pill
+                icon="time-outline"
+                label="12 saat (ÖÖ/ÖS)"
+                active={clock === '12'}
+                onPress={() => setClock('12')}
+              />
+            </View>
+
             <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>SATIR SIKLIĞI</Text>
             <View style={styles.btnRow}>
               <Pill
@@ -188,6 +217,16 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
               ))}
             </View>
             {summaryWarn && <Text style={[Type.caption, styles.status, { color: c.danger }]}>{summaryWarn}</Text>}
+
+            {Platform.OS === 'web' && (
+              <>
+                <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>KISAYOLLAR</Text>
+                <Text style={[Type.caption, styles.note, { color: c.textMuted }]}>
+                  n yeni not · t bugün · ← → önceki/sonraki gün · d gün görünümü · w hafta · z geri al · / ya da Ctrl+K
+                  ara. Notları fareyle günler arasında ya da gün görünümünde saate sürükleyebilirsin.
+                </Text>
+              </>
+            )}
 
             <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>YEDEK</Text>
             <Text style={[Type.caption, styles.note, { color: c.textMuted }]}>

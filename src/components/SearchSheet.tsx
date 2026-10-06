@@ -7,7 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { NOTE_TAG_KEYS, NoteTags, Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
-import { formatWeekday, fromISODate, TR_MONTHS } from '../services/calendar';
+import { formatClock, formatWeekday, fromISODate, TR_MONTHS } from '../services/calendar';
 import { splitNote } from '../services/notes';
 import { searchNotes } from '../services/search';
 import { useAgenda } from '../state/AgendaContext';
@@ -134,7 +134,7 @@ export default function SearchSheet({
                         </Text>
                         <Text style={[Type.caption, { color: c.textMuted }]}>
                           {n.date ? `${formatWeekday(n.date)}, ${d!.getDate()} ${TR_MONTHS[d!.getMonth()]}` : ''}
-                          {n.time_slot ? `  ·  ${n.time_slot}` : ''}
+                          {n.time_slot ? `  ·  ${formatClock(n.time_slot)}` : ''}
                         </Text>
                       </View>
                     </Pressable>

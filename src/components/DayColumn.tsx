@@ -18,11 +18,13 @@ import Animated, {
 
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
-import { formatWeekday, fromISODate, todayISO, TR_MONTHS, type ISODate } from '../services/calendar';
+import { formatClock, formatWeekday, fromISODate, todayISO, TR_MONTHS, type ISODate } from '../services/calendar';
 import { checklistProgress } from '../services/checklist';
 import { parseSmart } from '../services/naturalDate';
 import { splitNote } from '../services/notes';
 import { reminderLabel } from '../services/reminderTime';
+import { useDragSource, useDropZone } from '../platform/dnd';
+import { useShortcutEvent } from '../platform/shortcuts';
 import { useAgenda } from '../state/AgendaContext';
 import Bell from './Bell';
 import Checkbox from './Checkbox';
@@ -47,10 +49,16 @@ export default function DayColumn({
   onOpen: (note: EntryWithDate, alarm?: boolean) => void;
 }) {
   const c = usePalette();
-  const { saveNote, showDay, carryOver, selectDate, density } = useAgenda();
+  const { saveNote, showDay, carryOver, selectDate, density, moveNote, date: selected } = useAgenda();
+  const drop = useDropZone((id) => {
+    if (!notes.some((n) => n.id === id)) void moveNote(id, date);
+  });
   const lh = lineHeightFor(density);
   const [draft, setDraft] = useState('');
   const inputRef = useRef<TextInput>(null);
+  useShortcutEvent('compose', () => {
+    if (date === selected) inputRef.current?.focus();
+  });
   const today = todayISO();
   const isToday = date === today;
   const isPast = date < today;
@@ -70,7 +78,15 @@ export default function DayColumn({
   };
 
   return (
-    <View style={[styles.column, { width }, isToday && { backgroundColor: c.accentSoft + '55' }]}>
+    <View
+      ref={drop.ref}
+      style={[
+        styles.column,
+        { width },
+        isToday && { backgroundColor: c.accentSoft + '55' },
+        drop.over && { backgroundColor: c.accentSoft },
+      ]}
+    >
       <View style={styles.header}>
         <View style={styles.headRow}>
           <Pressable
@@ -226,6 +242,7 @@ export function TaskLine({
 }) {
   const c = usePalette();
   const { toggleNote, openMenu, density, selection, toggleSelect, selecting } = useAgenda();
+  const dragRef = useDragSource(note.id);
   const selected = selection.includes(note.id);
   const { title, body } = splitNote(note.text_content);
   const tint = tagColor(note.color, c);
@@ -257,6 +274,7 @@ export function TaskLine({
     >
       <Animated.View style={popStyle}>
         <Pressable
+          ref={dragRef}
           onPress={() => (selecting ? toggleSelect(note.id) : onOpen())}
           onLongPress={() => (selecting ? toggleSelect(note.id) : openMenu(note))}
           delayLongPress={380}
@@ -273,7 +291,7 @@ export function TaskLine({
           <Checkbox checked={done} onPress={() => toggleNote(note.id)} tint={tint} size={18} />
           {note.time_slot && (
             <Text style={[Type.caption, styles.time, { color: done ? c.textFaint : (tint ?? c.accent) }]}>
-              {note.time_slot}
+              {formatClock(note.time_slot)}
             </Text>
           )}
           <StrikeText text={title || body} done={done} style={Type.sub} color={c.text} lineColor={c.textFaint} />

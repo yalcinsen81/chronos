@@ -8,12 +8,22 @@ import Animated, { FadeIn, FadeInDown, FadeInLeft, FadeInRight } from 'react-nat
 
 import { Radius, Space, tagColor, Type, usePalette } from '../constants/theme';
 import type { EntryWithDate } from '../db/repository';
-import { addDays, formatWeekday, fromISODate, todayISO, TR_MONTHS, type ISODate } from '../services/calendar';
+import {
+  addDays,
+  formatClock,
+  formatWeekday,
+  fromISODate,
+  todayISO,
+  TR_MONTHS,
+  type ISODate,
+} from '../services/calendar';
 import { blockDuration, HOUR_HEIGHT, hourRange, layoutDay, timeToMinutes } from '../services/dayLayout';
 import { checklistProgress } from '../services/checklist';
 import { parseSmart } from '../services/naturalDate';
 import { splitNote } from '../services/notes';
 import { reminderFireDate, reminderLabel } from '../services/reminderTime';
+import { useDragSource, useDropZone } from '../platform/dnd';
+import { useShortcutEvent } from '../platform/shortcuts';
 import { useAgenda } from '../state/AgendaContext';
 import Bell from './Bell';
 import Checkbox from './Checkbox';
@@ -36,7 +46,9 @@ export default function DayView({
   onNew: (date: ISODate, time: string | null) => void;
 }) {
   const c = usePalette();
-  const { saveNote, selectDate } = useAgenda();
+  const { saveNote, selectDate, reschedule } = useAgenda();
+  const composeRef = useRef<TextInput>(null);
+  useShortcutEvent('compose', () => composeRef.current?.focus());
   // Gün değişince içerik değişim yönüne doğru kayarak gelir
   const prevDate = useRef(date);
   const dir = date > prevDate.current ? 1 : date < prevDate.current ? -1 : 0;
@@ -64,6 +76,14 @@ export default function DayView({
   );
   const byId = useMemo(() => Object.fromEntries(timed.map((n) => [n.id, n])), [timed]);
   const totalH = (end - start) * HOUR_HEIGHT;
+  // Sürükle-bırak: bırakılan yükseklik 15 dakikaya yuvarlanıp yeni başlangıç saati olur
+  const drop = useDropZone((id, { offsetY }) => {
+    const m = Math.min(
+      end * 60 - 15,
+      Math.max(start * 60, start * 60 + Math.round(((offsetY / HOUR_HEIGHT) * 60) / 15) * 15),
+    );
+    void reschedule(id, { date, time: `${pad(Math.floor(m / 60))}:${pad(m % 60)}` });
+  });
 
   // Şimdiki zaman çizgisi (yalnızca bugünde), dakikada bir ilerler
   const [now, setNow] = useState(() => new Date());
@@ -164,6 +184,7 @@ export default function DayView({
           ))}
           <View style={[styles.addLine, { borderBottomColor: c.separator }]}>
             <TextInput
+              ref={composeRef}
               value={draft}
               onChangeText={setDraft}
               onSubmitEditing={add}
@@ -182,7 +203,11 @@ export default function DayView({
           </View>
 
           <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>SAATLER</Text>
-          <View style={{ height: totalH + 28 }} onLayout={(e) => (timelineY.current = e.nativeEvent.layout.y)}>
+          <View
+            ref={drop.ref}
+            style={{ height: totalH + 28 }}
+            onLayout={(e) => (timelineY.current = e.nativeEvent.layout.y)}
+          >
             {hours.map((h) => (
               <Pressable
                 key={h}
@@ -195,7 +220,9 @@ export default function DayView({
                   pressed && { backgroundColor: c.fill },
                 ]}
               >
-                <Text style={[Type.micro, styles.hourLabel, { color: c.textFaint }]}>{pad(h)}:00</Text>
+                <Text style={[Type.micro, styles.hourLabel, { color: c.textFaint }]}>
+                  {formatClock(`${pad(h)}:00`)}
+                </Text>
                 {/* Çizgi saat yazısının sağından başlar; yazının üstünden geçmez */}
                 <View style={[styles.hourLine, { backgroundColor: c.separator }]} />
               </Pressable>
@@ -255,6 +282,7 @@ function Block({
 }) {
   const c = usePalette();
   const { toggleNote, openMenu, selection, toggleSelect, selecting } = useAgenda();
+  const dragRef = useDragSource(note.id);
   const selected = selection.includes(note.id);
   const { title, body } = splitNote(note.text_content);
   const tint = tagColor(note.color, c) ?? c.accent;
@@ -280,6 +308,7 @@ function Block({
       ]}
     >
       <Pressable
+        ref={dragRef}
         onPress={() => (selecting ? toggleSelect(note.id) : onOpen(note))}
         onLongPress={() => (selecting ? toggleSelect(note.id) : openMenu(note))}
         delayLongPress={380}
@@ -296,8 +325,8 @@ function Block({
         <View style={styles.blockText}>
           <StrikeText text={title || body} done={done} style={Type.sub} color={c.text} lineColor={c.textFaint} />
           <Text numberOfLines={1} style={[Type.micro, { color: done ? c.textFaint : tint }]}>
-            {note.time_slot}
-            {note.end_time ? `–${note.end_time}` : ''}
+            {formatClock(note.time_slot!)}
+            {note.end_time ? `–${formatClock(note.end_time)}` : ''}
             {sub.total > 0 ? `  ·  ${sub.done}/${sub.total}` : ''}
             {soon
               ? `  ·  alarm ${minsLeft} dk sonra`
