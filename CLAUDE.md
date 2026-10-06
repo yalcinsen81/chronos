@@ -85,6 +85,10 @@ src/
     gün adı çözümleme gibi ayardan bağımsız işler `startOfIsoWeek` kullanır.
 21. **.ics** `services/ics.ts` (saf, testli): kendi dışa aktardığı UID `<id>@chronos` aynı kimlikle geri gelir, dışarıdan gelenin kimliği içerikten türetilir
     (`importEntries` kimliğe göre tekrarı atlar). Çok günlü etkinlik yalnızca ilk güne konur, tekrar kuralı yok sayılır. İlk açılış karşılaması `settings.onboarded`.
+22. **Yedek hatırlatması** `services/backupNudge.ts` (saf, testli): `settings.backupRemind` (tarih); ≥5 not varken ilk görüşte bugün+7 yazılır,
+    tarih gelince `BackupNudge` şeridi çıkar; yedek alınca +7, "Sonra" +2. Web'de yedek `.json` dosyası olarak iner (`saveBackup.ts`).
+    **Etiket adları** `settings.tagNames` (JSON, `services/tagNames.ts`); renk anahtarı değişmez, yalnızca görünen ad. `TagFilterBar` haftada
+    renkli not varsa çıkar; `tagFilter` AgendaContext'te `weekNotes`'u süzer (veri tabanına dokunmaz).
 
 ## Komutlar
 

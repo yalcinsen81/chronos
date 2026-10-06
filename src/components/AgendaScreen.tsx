@@ -24,6 +24,7 @@ import type { EntryWithDate } from '../db/repository';
 import { addDays, todayISO, type ISODate } from '../services/calendar';
 import { useGlobalShortcuts } from '../platform/shortcuts';
 import { useAgenda } from '../state/AgendaContext';
+import BackupNudge from './BackupNudge';
 import DayColumn from './DayColumn';
 import DayView from './DayView';
 import OnboardingCard from './OnboardingCard';
@@ -31,6 +32,7 @@ import NoteSheet, { type NoteDraft } from './NoteSheet';
 import PressScale from './PressScale';
 import RowMenu from './RowMenu';
 import SelectionBar from './SelectionBar';
+import TagFilterBar from './TagFilterBar';
 import UndoBar from './UndoBar';
 import WeekHeader from './WeekHeader';
 
@@ -84,6 +86,8 @@ export default function AgendaScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <WeekHeader showStrip={!wide || view === 'day'} onOpenNote={open} />
         <OnboardingCard />
+        <BackupNudge />
+        <TagFilterBar />
         {view === 'day' ? (
           // Hafta → gün: gün görünümü hafifçe büyüyerek belirir
           <Animated.View key="day" entering={FadeIn.duration(240)} style={styles.flex}>

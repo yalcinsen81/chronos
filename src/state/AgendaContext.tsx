@@ -16,6 +16,14 @@ import {
   type Appearance,
 } from '../constants/theme';
 import { buildBackup, parseBackup } from '../services/backup';
+import { parseTagNames, withTagName, type TagNames } from '../services/tagNames';
+import {
+  BACKUP_MIN_NOTES,
+  isBackupDue,
+  nextAfterBackup,
+  nextAfterSnooze,
+  parseRemindFrom,
+} from '../services/backupNudge';
 import { buildIcs, parseIcs } from '../services/ics';
 import { haptics } from '../services/haptics';
 import {
@@ -74,6 +82,12 @@ interface AgendaState {
   weekDays: ISODate[];
   /** Haftadaki notlar, güne göre (saatliler önce, saate göre sıralı) */
   weekNotes: Record<ISODate, EntryWithDate[]>;
+  /** Kullanıcının renklere verdiği adlar (yoksa varsayılan renk adı kullanılır) */
+  tagNames: TagNames;
+  setTagName: (key: string, name: string) => Promise<void>;
+  /** Seçiliyse yalnızca bu renkteki notlar gösterilir */
+  tagFilter: string | null;
+  setTagFilter: (key: string | null) => void;
   /** Herhangi bir not değiştiğinde artar; takvim noktaları buna göre yenilenir */
   revision: number;
   /** Haftalık ya da günlük görünüm */
@@ -137,6 +151,9 @@ interface AgendaState {
   /** İlk açılış karşılaması gösterildi mi */
   onboarded: boolean;
   finishOnboarding: () => Promise<void>;
+  backupDue: boolean;
+  markBackedUp: () => Promise<void>;
+  snoozeBackup: () => Promise<void>;
   /** Yedek metnini içe aktarır; var olan notlara dokunmaz. Eklenen not sayısını ya da hata iletisini döner. */
   importBackup: (json: string) => Promise<{ added: number } | { error: string }>;
   /** Tüm notlar (arama için) */
@@ -153,7 +170,15 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
   const [ready, setReady] = useState(false);
   const [notebookId, setNotebookId] = useState<string | null>(null);
   const [date, setDate] = useState<ISODate>(todayISO());
-  const [weekNotes, setWeekNotes] = useState<Record<ISODate, EntryWithDate[]>>({});
+  const [allWeekNotes, setWeekNotes] = useState<Record<ISODate, EntryWithDate[]>>({});
+  const [tagNames, setTagNames] = useState<TagNames>({});
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const weekNotes = useMemo(() => {
+    if (!tagFilter) return allWeekNotes;
+    const out: Record<ISODate, EntryWithDate[]> = {};
+    for (const [d, list] of Object.entries(allWeekNotes)) out[d] = list.filter((n) => n.color === tagFilter);
+    return out;
+  }, [allWeekNotes, tagFilter]);
   const weekStart = startOfWeek(date);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const [revision, setRevision] = useState(0);
@@ -220,6 +245,7 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
         setPureBlack(true);
         setPureBlackState(true);
       }
+      setTagNames(parseTagNames(await repo.getSetting('tagNames')));
       const savedDensity = await repo.getSetting('density');
       if (savedDensity === 'siki' || savedDensity === 'rahat') setDensityState(savedDensity);
       const rawSummary = await repo.getSetting('summaryHour');
@@ -517,6 +543,14 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     },
     [repo],
   );
+  const setTagName = useCallback(
+    async (key: string, name: string) => {
+      const next = withTagName(tagNames, key, name);
+      setTagNames(next);
+      await repo.setSetting('tagNames', JSON.stringify(next));
+    },
+    [repo, tagNames],
+  );
   const setClock = useCallback(
     async (v: '24' | '12') => {
       setClock12(v === '12');
@@ -646,6 +680,31 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     await repo.setSetting('onboarded', '1');
   }, [repo]);
 
+  // Haftalık yedek hatırlatması: ilk kez yeterli not birikince bugünden 7 gün sonrası kaydedilir
+  const [backupDue, setBackupDue] = useState(false);
+  useEffect(() => {
+    if (!ready || !notebookId) return;
+    (async () => {
+      const count = (await repo.listAllEntries(notebookId)).length;
+      if (count < BACKUP_MIN_NOTES) return;
+      const today = todayISO();
+      let from = parseRemindFrom(await repo.getSetting('backupRemind'));
+      if (!from) {
+        from = nextAfterBackup(today);
+        await repo.setSetting('backupRemind', from);
+      }
+      setBackupDue(isBackupDue(from, today, count));
+    })().catch((e) => console.warn('Yedek hatırlatması okunamadı', e));
+  }, [repo, ready, notebookId]);
+  const markBackedUp = useCallback(async () => {
+    setBackupDue(false);
+    await repo.setSetting('backupRemind', nextAfterBackup(todayISO()));
+  }, [repo]);
+  const snoozeBackup = useCallback(async () => {
+    setBackupDue(false);
+    await repo.setSetting('backupRemind', nextAfterSnooze(todayISO()));
+  }, [repo]);
+
   const importBackup = useCallback(
     async (json: string) => {
       if (!notebookId) return { error: 'Veri tabanı hazır değil.' };
@@ -688,6 +747,10 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     weekStart,
     weekDays,
     weekNotes,
+    tagNames,
+    setTagName,
+    tagFilter,
+    setTagFilter,
     revision,
     accent,
     setAccent,
@@ -721,6 +784,9 @@ export function AgendaProvider({ driver, children }: { driver: SqlDriver; childr
     moveEach,
     onboarded,
     finishOnboarding,
+    backupDue,
+    markBackedUp,
+    snoozeBackup,
     listAll,
     view,
     menuNote,

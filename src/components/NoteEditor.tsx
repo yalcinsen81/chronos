@@ -18,6 +18,7 @@ import { remindersSupported, requestReminderPermission } from '../services/remin
 import { addDays, todayISO, type ISODate } from '../services/calendar';
 import { REMINDER_OPTIONS, reminderLabel } from '../services/reminderTime';
 import { REPEAT_OPTIONS, repeatLabel } from '../services/recurrence';
+import { tagLabel } from '../services/tagNames';
 import { useAgenda } from '../state/AgendaContext';
 import Checkbox from './Checkbox';
 import { webNoOutline } from './webStyles';
@@ -45,7 +46,7 @@ export default function NoteEditor({
   onClose: () => void;
 }) {
   const c = usePalette();
-  const { saveNote, deleteNote, toggleNote, moveNote } = useAgenda();
+  const { saveNote, deleteNote, toggleNote, moveNote, tagNames } = useAgenda();
   const initial = note ? splitNote(note.text_content) : { title: '', body: '' };
   const [title, setTitle] = useState(initial.title);
   const initialBody = splitChecklist(initial.body);
@@ -355,13 +356,18 @@ export default function NoteEditor({
                 hitSlop={3}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
-                accessibilityLabel={`${NoteTags[k].label} etiket`}
+                accessibilityLabel={`${tagLabel(tagNames, k, NoteTags[k].label)} etiket`}
                 style={[styles.tagRing, active && { borderColor: col }]}
               >
                 <View style={[styles.tagDot, { backgroundColor: col }]} />
               </Pressable>
             );
           })}
+          {color && (
+            <Text style={[Type.caption, { color: c.textMuted, marginLeft: Space.xs }]} numberOfLines={1}>
+              {tagLabel(tagNames, color, NoteTags[color as keyof typeof NoteTags]?.label ?? '')}
+            </Text>
+          )}
         </View>
       </View>
 

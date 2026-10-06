@@ -10,6 +10,7 @@ import type { EntryWithDate } from '../db/repository';
 import { formatClock, formatWeekday, fromISODate, TR_MONTHS } from '../services/calendar';
 import { splitNote } from '../services/notes';
 import { searchNotes } from '../services/search';
+import { tagLabel } from '../services/tagNames';
 import { useAgenda } from '../state/AgendaContext';
 import { webNoOutline } from './webStyles';
 
@@ -23,7 +24,7 @@ export default function SearchSheet({
   onOpenNote: (n: EntryWithDate) => void;
 }) {
   const c = usePalette();
-  const { listAll, selectDate } = useAgenda();
+  const { listAll, selectDate, tagNames } = useAgenda();
   const [all, setAll] = useState<EntryWithDate[]>([]);
   const [q, setQ] = useState('');
   const [color, setColor] = useState<string | null>(null);
@@ -80,7 +81,9 @@ export default function SearchSheet({
           </View>
 
           <View style={styles.tags}>
-            <Text style={[Type.caption, { color: c.textMuted }]}>Renk</Text>
+            <Text style={[Type.caption, { color: c.textMuted }]}>
+              {color ? tagLabel(tagNames, color, NoteTags[color as keyof typeof NoteTags]?.label ?? 'Renk') : 'Renk'}
+            </Text>
             {NOTE_TAG_KEYS.map((k) => {
               const active = color === k;
               const col = tagColor(k, c)!;
@@ -91,7 +94,7 @@ export default function SearchSheet({
                   hitSlop={3}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: active }}
-                  accessibilityLabel={`${NoteTags[k].label} renkli notlar`}
+                  accessibilityLabel={`${tagLabel(tagNames, k, NoteTags[k].label)} renkli notlar`}
                   style={[styles.ring, active && { borderColor: col }]}
                 >
                   <View style={[styles.dot, { backgroundColor: col }]} />

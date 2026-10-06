@@ -7,8 +7,21 @@ import { useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { ACCENT_KEYS, AccentThemes, paletteFor, Radius, Space, Type, usePalette } from '../constants/theme';
+import {
+  ACCENT_KEYS,
+  AccentThemes,
+  NOTE_TAG_KEYS,
+  NoteTags,
+  paletteFor,
+  Radius,
+  Space,
+  tagColor,
+  Type,
+  usePalette,
+} from '../constants/theme';
 import { useAgenda } from '../state/AgendaContext';
+import { MAX_TAG_NAME } from '../services/tagNames';
+import { saveBackupFile } from './saveBackup';
 import { webNoOutline } from './webStyles';
 
 export default function SettingsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -20,6 +33,9 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
     importBackup,
     exportIcs,
     importIcs,
+    markBackedUp,
+    tagNames,
+    setTagName,
     pureBlack,
     setBlack,
     appearance,
@@ -46,6 +62,7 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
     setBackupText(json);
     try {
       await Clipboard.setStringAsync(json);
+      void markBackedUp();
       setStatus({ text: 'Yedek panoya kopyalandı. Bir yere yapıştırıp sakla.' });
     } catch {
       setStatus({ text: 'Panoya kopyalanamadı; aşağıdaki metni elle seçip kopyala.', error: true });
@@ -57,9 +74,16 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
     setBackupText(json);
     try {
       await Share.share({ message: json, title: 'Chronos yedeği' });
+      void markBackedUp();
     } catch {
       setStatus({ text: 'Paylaşım açılamadı.', error: true });
     }
+  };
+
+  const download = async () => {
+    await saveBackupFile(await exportBackup());
+    void markBackedUp();
+    setStatus({ text: 'chronos-yedek.json indirildi. Güvenli bir yerde sakla.' });
   };
 
   const restore = async () => {
@@ -161,6 +185,14 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
                 );
               })}
             </View>
+
+            <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>ETİKET ADLARI</Text>
+            <Text style={[Type.caption, styles.note, { color: c.textMuted }]}>
+              Renklere "İş", "Ev", "Spor" gibi isim ver; haftada o renge dokununca yalnızca o notlar görünür.
+            </Text>
+            {NOTE_TAG_KEYS.map((k) => (
+              <TagNameRow key={k} tag={k} value={tagNames[k] ?? ''} onCommit={(name) => void setTagName(k, name)} />
+            ))}
 
             <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>GÖRÜNÜM</Text>
             <View style={styles.btnRow}>
@@ -313,14 +345,15 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
 
             <Text style={[Type.micro, styles.section, { color: c.textMuted }]}>YEDEK</Text>
             <Text style={[Type.caption, styles.note, { color: c.textMuted }]}>
-              Notların yalnızca bu cihazda durur. Yedeği kopyalayıp bir yere (not uygulaması, e-posta) yapıştırarak
-              sakla; gerekirse buradan geri yükle.
+              Notların yalnızca bu cihazda durur; tarayıcı verisi silinirse gider. Haftada bir yedek al: dosya indir ya
+              da kopyalayıp bir yere (not uygulaması, e-posta) yapıştır; gerekirse buradan geri yükle.
             </Text>
             <View style={styles.btnRow}>
+              {Platform.OS === 'web' && <Pill icon="download-outline" label="Dosya indir" onPress={download} primary />}
               <Pill icon="copy-outline" label="Yedeği kopyala" onPress={copy} />
               {Platform.OS !== 'web' && <Pill icon="share-outline" label="Paylaş" onPress={share} />}
               <Pill
-                icon="download-outline"
+                icon="arrow-undo-outline"
                 label="Geri yükle"
                 onPress={() => setRestoreOpen((v) => !v)}
                 active={restoreOpen}
@@ -367,6 +400,36 @@ export default function SettingsSheet({ visible, onClose }: { visible: boolean; 
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+/** Bir rengin adı; yazarken yerelde tutulur, odak çıkınca ya da Enter'da kaydedilir */
+function TagNameRow({
+  tag,
+  value,
+  onCommit,
+}: {
+  tag: (typeof NOTE_TAG_KEYS)[number];
+  value: string;
+  onCommit: (name: string) => void;
+}) {
+  const c = usePalette();
+  const [text, setText] = useState(value);
+  return (
+    <View style={styles.tagRow}>
+      <View style={[styles.tagDot, { backgroundColor: tagColor(tag, c)! }]} />
+      <TextInput
+        value={text}
+        onChangeText={setText}
+        onBlur={() => onCommit(text)}
+        onSubmitEditing={() => onCommit(text)}
+        maxLength={MAX_TAG_NAME}
+        placeholder={NoteTags[tag].label}
+        placeholderTextColor={c.textFaint}
+        style={[Type.sub, styles.tagInput, webNoOutline, { color: c.text, backgroundColor: c.fill }]}
+        accessibilityLabel={`${NoteTags[tag].label} etiketinin adı`}
+      />
+    </View>
   );
 }
 
@@ -434,6 +497,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   swatch: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  tagRow: { flexDirection: 'row', alignItems: 'center', gap: Space.md },
+  tagDot: { width: 18, height: 18, borderRadius: 9 },
+  tagInput: { flex: 1, height: 38, borderRadius: Radius.md, paddingHorizontal: Space.md },
   btnRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.sm },
   pill: {
     flexDirection: 'row',
